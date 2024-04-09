@@ -1,0 +1,28 @@
+name: run-demo-pipeline
+
+# This workflow uses the Snakemake GitHub action to test that the Snakemake
+# pipeline can be run in dryrun mode, as a sanity check
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  run-demo-pipeline:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -el {0}
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Test workflow
+        uses: snakemake/snakemake-github-action@v1.24.0
+        with:
+          directory: .
+          snakefile: ./Snakefile
+          args: "--software-deployment-method conda --show-failed-logs -n"
