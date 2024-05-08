@@ -1,0 +1,89 @@
+# Directory and file configuration
+FASTQ_DIR = "Test/fastq"
+BAM_DIR = "Test/bam_files"
+BCM_DIR = "Test/benchmark_files"
+CALL_DIR = "cusTest/vcf_call"
+
+
+
+
+# Obtain a list of sequence files per strain
+genomes_ids = glob_wildcards(FASTQ_DIR + "/{genome_id}_1.fastq.gz").genome_id
+
+# Define the final outputs
+rule all:
+    input:
+        expand(BAM_DIR + "/{genome_id}_rg.bam", genome_id=genomes_ids),
+        expand(BAM_DIR + "/{genome_id}_rg.bam.bai", genome_id=genomes_ids),
+        vcf=CALL_DIR + "/joint_calls.vcf",
+        stats=CALL_DIR + "/joint_calls.stats"
+
+
+
+# Pre-processing: Trimming and filtering reads
+rule trim_and_filter:
+### This is written for single end reads (SE argument and ILLUMINACLIP:TruSeq3-SE:2:30:10 is specific to SE)
+### Here,we trim the Illumina adapters (ILLUMINACLIP:TruSeq3-SE:2:30:10), remove any reads that has a Phred score lower than 30 on a sliding window of 4 bases, remove any read shorter than 30bases
+    input:
+        fastq_1=FASTQ_DIR + "/{genome_id}_1.fastq.gz",
+        fastq_2=FASTQ_DIR + "/{genome_id}_2.fastq.gz"
+    output:
+        fastp_1_fastq=temporary(FASTQ_DIR + "/{genome_id}_fastp_1.fastq.gz"),
+        fastp_2_fastq=temporary(FASTQ_DIR + "/{genome_id}_fastp_2.fastq.gz")
+    benchmark:
+        BCM_DIR + "/trim_and_filter_{genome_id}_1.txt"
+    shell:
+        "fastp -i {input.fastq_1} -I {input.fastq_2}  -o {output.fastp_1_fastq} -O {output.fastp_2_fastq} -q 30 -u 50 --length_required 30 --correction"
+
+# Piping readd alignment and sam/bam formating into a single rule
+rule aln_and_format:
+    input:
+        fastp_1_fastq=FASTQ_DIR + "/{genome_id}_fastp_1.fastq.gz",
+        fastp_2_fastq=FASTQ_DIR + "/{genome_id}_fastp_2.fastq.gz"
+    output:
+        bam_final=BAM_DIR + "/{genome_id}_rg.bam",
+        bam_idx=BAM_DIR + "/{genome_id}_rg.bam.bai"
+    params:
+        ref="Test/pangenome/whole_pangenome.fasta",
+        picard_path="/Users/manonmorin/miniconda3/envs/ecoli_workflow_env/share/picard-2.27.5-0/picard.jar",
+        sample="{genome_id}",
+        metrics_file=METRICS_DIR + "/metrics_{genome_id}.txt"
+    benchmark:
+        BCM_DIR + "/aln_and_format_{genome_id}.txt"
+    shell:
+        """
+        bwa mem -M -t 8 {params.ref} {input.fastp_1_fastq} {input.fastp_2_fastq} | 
+        samtools sort -n -O bam - |  # Sort by name for fixmate
+        samtools fixmate -m - - |  # Fix the mate information
+        samtools sort -O bam - |  # Sort by coordinates
+        samtools markdup - - |  # Mark duplicates, output to stdout
+        java -jar {params.picard_path} AddOrReplaceReadGroups I=/dev/stdin O=/dev/stdout RGID=4 RGLB=lib1 RGPL=illumina RGPU=unit1 RGSM={params.sample} |
+        tee {output.bam_final} > /dev/null  # Write to file, discard stdout
+        samtools index {output.bam_final}
+        """
+
+# joint calling
+rule vcf_calling:
+    input:
+        bai_files = expand(BAM_DIR + "/{genome_id}_rg.bam.bai", genome_id=genomes_ids),
+        list_bam="custom_eval/list_bam5.txt"
+    output:
+        vcf=CALL_DIR + "/joint_calls.vcf"
+    params:
+        ref="Test/pangenome/whole_pangenome.fasta"
+    benchmark:
+        BCM_DIR + "/join_calling.txt"
+    shell:
+        "bcftools mpileup -Ou -f {params.ref} $(cat {input.list_bam} | tr '\n' ' ') | bcftools call --ploidy 1 -vmO v -o {output.vcf}"
+
+# joint calling
+rule vcf_stats:
+    input:
+        vcf=CALL_DIR + "/joint_calls.vcf"
+    output:
+        stats=CALL_DIR + "/joint_calls.stats"
+    benchmark:
+        BCM_DIR + "/stats.txt"
+    shell:
+        "bcftools stats {input.vcf} > {output.stats}"
+
