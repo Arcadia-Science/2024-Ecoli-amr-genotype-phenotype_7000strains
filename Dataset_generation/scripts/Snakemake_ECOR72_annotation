@@ -1,0 +1,45 @@
+# Define directories and file locations
+GENOME_DIR = "Genome_files" # location where genomes have been stored
+GENOME_UNZ_DIR = "Unzipped_Genome_files" #location to save unzipped genomes
+OUTPUT_DIR = "Annotation_files" #location to save Prokka outputs
+GFF_DIR = "Gff_files_ECOR72" #location to specifically store the GFF that are produced by Prokka
+
+
+# Obtain a list of genome's name
+genome_ids = glob_wildcards(GENOME_DIR + "/{genome_id}_genomic.fna.gz").genome_id
+
+# Target rule
+rule all:
+    input:
+        expand(GENOME_UNZ_DIR + "/{genome_id}.fna", genome_id=genome_ids),
+        expand(OUTPUT_DIR + "/{genome_id}/{genome_id}.gff", genome_id=genome_ids),
+        expand(GFF_DIR + "/{genome_id}.gff", genome_id=genome_ids)
+
+# Rule to unzip the genomes
+rule decompress_genome:
+    input:
+        fastaz = GENOME_DIR + "/{genome_id}_genomic.fna.gz"
+    output:
+        fasta = GENOME_UNZ_DIR + "/{genome_id}.fna"
+    shell:
+        "gunzip -c {input.fastaz} > {output.fasta}"
+
+# Rule to annotate genomes with Prokka
+rule annotate_genome:
+    input:
+        fasta = GENOME_UNZ_DIR + "/{genome_id}.fna"
+    output:
+        gff = OUTPUT_DIR + "/{genome_id}/{genome_id}.gff"
+    shell:
+        "prokka --force --outdir {OUTPUT_DIR}/{wildcards.genome_id} \
+               --prefix {wildcards.genome_id} \
+               {input.fasta}"
+
+# Rule to move gff files into new directory
+rule move_gff:
+    input:
+        gff_or = OUTPUT_DIR + "/{genome_id}/{genome_id}.gff"
+    output:
+        gff_nw = GFF_DIR + "/{genome_id}.gff"
+    shell:
+        "cp {input.gff_or} {output.gff_nw}"

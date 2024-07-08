@@ -5,7 +5,18 @@ channels:
 dependencies:
   - pip=23.2.1
   - pre-commit=3.5.0
-  - python=3.12.0
+  - python=3.12.3
   - ruff=0.1.6
   - snakefmt=0.8.5
   - snakemake-minimal=8.0.1
+  - roary=3.13.0
+  - vcftools=0.1.16
+  - samtools=1.20
+  - r-base=4.3.3
+  - picard 2.27.5
+  - parlell=20240322
+  - panda=2.2.2
+  - numpy=1.26.4
+  - bwa=0.7.18
+  - bcftools=1.20
+  - prokka=1.14.6
