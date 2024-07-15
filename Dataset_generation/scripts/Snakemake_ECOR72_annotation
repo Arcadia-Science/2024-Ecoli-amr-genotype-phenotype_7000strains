@@ -1,11 +1,11 @@
 # Define directories and file locations
-GENOME_DIR = "Genome_files" # location where genomes have been stored
-GENOME_UNZ_DIR = "Unzipped_Genome_files" #location to save unzipped genomes
-OUTPUT_DIR = "Annotation_files" #location to save Prokka outputs
-GFF_DIR = "Gff_files_ECOR72" #location to specifically store the GFF that are produced by Prokka
+GENOME_DIR = "genome_files" #location where genomes have been stored - the genomes files can be downloaded from the Batch Entrez website, using the assembly_accession numbers from the table: dataset_generation/data/ECOR72_SRA_and_assembly_accessions.csv to search in the Nucleotide Database
+GENOME_UNZ_DIR = "unzipped_Genome_files" #location to save unzipped genomes
+OUTPUT_DIR = "annotation_files" #location to save Prokka outputs
+GFF_DIR = "gff_files_ECOR72" #location to specifically store the GFF that are produced by Prokka
 
 
-# Obtain a list of genome's name
+# Obtain a list of genome's identifiers (or id) that corresponds to the name of the sequencing file and will be use to identify and track genomes in the pipeline
 genome_ids = glob_wildcards(GENOME_DIR + "/{genome_id}_genomic.fna.gz").genome_id
 
 # Target rule
