@@ -7,7 +7,7 @@
 
 In this work, we aimed to produce a large-scale genotype-phenotype dataset that can be used as a resource to serve as a testbed for developing further strategies in genotype-phenotype investigations or evolutionary research.
 
-We leveraged the genetic information and antimicrobial resistance (AMR) phenotype data available for the bacterium *Escherichia* coli to construct our dataset, and took advantage of the existing knowledge about genetic variations and AMR phenotypes to validate our approach and dataset. We performed variant calling and compiled a genotype-phenotype dataset for more than 7,000 *E. coli* strains. Briefly, variant calling consists of identifying all genetic variations and their associated genotypes in a population compared to a reference genome. This is performed by aligning sequencing reads for each sample of the population against a reference genome, then identifying polymorphic regions in the population, and finally characterizing variants and their genotypes at each of these polymorphic regions.
+We leveraged the genetic information and antimicrobial resistance (AMR) phenotype data available for the bacterium *Escherichia coli* to construct our dataset, and took advantage of the existing knowledge about genetic variations and AMR phenotypes to validate our approach and dataset. We performed variant calling and compiled a genotype-phenotype dataset for more than 7,000 *E. coli* strains. Briefly, variant calling consists of identifying all genetic variations and their associated genotypes in a population compared to a reference genome. This is performed by aligning sequencing reads for each sample of the population against a reference genome, then identifying polymorphic regions in the population, and finally characterizing variants and their genotypes at each of these polymorphic regions.
 
 Here, we have generated a dataset that successfully revealed significant genetic diversity and identified 2.4 million variants. By focusing on non-silent variants within genes associated with AMR, we confirmed the dataset's accuracy and provided insights into specific mutations contributing to resistance to trimethoprim.
 
@@ -21,9 +21,9 @@ This repository uses Snakemake to run two different the pipelines that will cons
 After installing conda and [mamba](https://mamba.readthedocs.io/en/latest/), run the following command to create the pipeline run environment.
 
 ```{bash}
-TODO: Replace ecoli_amr_GP with the name of your environment
-mamba env create -n ecoli_amr_GP --file envs/dev.yml
-conda activate ecoli_amr_GP
+TODO: Replace <NAME> with the name of your environment
+mamba env create -n <NAME> --file envs/dev.yml
+conda activate <NAME>
 ```
 
 Snakemake manages rule-specific environments via the `conda` directive and using environment files in the [envs/](./envs/) directory. Snakemake itself is installed in the main development conda environment as specified in the [dev.yml](./envs/dev.yml) file.
@@ -39,6 +39,8 @@ conda env export --from-history --no-builds > envs/dev.yml
 
 ## Data
 
+TODO: Add details about the description of input / output data and links to Zenodo depositions, if applicable.
+
 If you want to reproduce this work or access the data, please download the corresponding folder from Zenodo (ADD LINK). The paths mentioned in this ReadMe refer to the organization of the Zenodo folder, which is mirrored in this GitHub repository as well and we have included relevant data here when their size permits.
 
 ## Overview
@@ -49,7 +51,7 @@ The primary objective of this study was to integrate available genotypic and phe
 
 This repository is divided into two sections. 
 The first section, **dataset_generation**, includes the code and information necessary to build the genotype dataset and perform the variant calling when size permitted. It covers major steps like the generation of the reference pangenome used for variant calling, the variant calling pipeline applied to each of the 7,000 strains, the filtering of false positive variants, and the annotation of the variants. 
-The second section, **dataset_analysis**, includes the code and information used to process and analyze the dataset and generate figures for the Pub (https://doi.org/10.57844/arcadia-d2cf-ebe5). It includes the preliminary analysis of AMR phenotypes within the population, and the analysis of variants in regards to knowm AMR phenotypes.
+The second section, **dataset_analysis**, includes the code and information used to process and analyze the dataset and generate figures for the Pub (https://doi.org/10.57844/arcadia-d2cf-ebe5). It includes the preliminary analysis of AMR phenotypes within the population, and the analysis of variants in regards to known AMR phenotypes.
 
 ### Approach
 
@@ -57,22 +59,23 @@ The second section, **dataset_analysis**, includes the code and information used
 
 The first step to generate our dataset involved mapping out all the genetic variations within the population to a reference genome. This process led to the creation of a genotype matrix, which summarizes the genotype of each individual at each variant across the genome. The procedure included several key steps: selecting and constructing a reference genome against which genetic variants are identified, identifying genetic variants within each strain, integrating all the genetic variants and their corresponding genotypes from all strains to construct the genotype matrix, filtering false positives and annotating the variants.
 The codes and some data associated with this part are all shared in the **dataset_generation** folder of this repo. 
-To obtain the all input and output data and be able to recapitulate this analysis, please download the Zenodo repository: LINK TO ZENODO
+To obtain the all input and output data and be able to recapitulate this analysis, please download the Zenodo repository
+### TODO: ADD ZENODO link
 
 ##### Generation of the reference genome
 
 The selection of a good reference genome is important for genotype-phenotype analysis and the precise identification and annotation of genetic variants in the population. The reference genome must provide comprehensive coverage and accurately represent the genetic diversity of the population (https://doi.org/10.1099/mgen.0.001021). 
-*E. coli* is a highly recombinogenic species, exhibiting high genetic diversity among its strains, so we need a reference genome that encompasses this global diversity. Therefore, we have generated a pangenome using the genomes of the ECOR collection, which consists of 72 *E. coli* strains.
+*E. coli* is a highly recombinogenic species, exhibiting high genetic diversity among its strains, so we need a reference genome that encompasses this global diversity. Therefore, we have generated a pangenome using the genomes of the ECOR collection, which consists of 72 *E. coli* strains isolated from a wide variety of hosts and geographical locations. This collection offers a broad representation of the natural diversity of the species (https://doi.org/10.1128/jb.157.2.690-693.1984).
 
 From these strains, we constructed a pangenome containing both coding sequences and intergenic regions (IGRs). 
 
-To construct the pangenome, we first downloaded the genome files for every 72 strains from (https://doi.org/10.1128/mra.01133-18) using Batch Entrez [link] and the assembly_accession numbers from this table: dataset_generation/data/ECOR72_SRA_and_assembly_accessions.csv.
+To construct the pangenome, we first downloaded the genome files for each of the 72 strains from (https://doi.org/10.1128/mra.01133-18) using Batch Entrez API [link](https://www.ncbi.nlm.nih.gov/sites/batchentrez) and the assembly_accession numbers from this table: dataset_generation/data/ECOR72_SRA_and_assembly_accessions.csv.
 
 We then used a snakefile (data_generation/scripts/Snakemake_ECOR72_annotation) to unzip, reannotate the genomes using Prokka (https://doi.org/10.1093/bioinformatics/btu153), and sort the generated gff files into a specific folder for further analysis with Roary (https://doi.org/10.1093/bioinformatics/btv421)
 `snakemake -s dataset_generation/scripts/Snakemake_ECOR72_annotation --cores 8`
 
-Next, we used Roary to create the pangenome of coding sequences. We created the pangenome using a 90% identity threshold between the proteins (`i -90`) and included the flag -mafft to use the aligniment function and obtain the final fasta file containing all the pangenome sequences.
-We ran the follwoing command line:
+Next, we used Roary to create the pangenome of coding sequences. We created the pangenome using a 90% identity threshold between the proteins (`i -90`) and included the flag `-mafft` to use the aligniment function and obtain the final fasta file containing all the pangenome sequences.
+We ran the following command line:
 `roary -e --mafft -f dataset_generation/results/pangenome_cds -i 90 Gff_files/*.gff -p 8`  
 where Gff_files is the location of all the previously generated Prokka Gff files.
 The two main outputs of Roary used in this work are dataset_generation/results/pangenome_cds/gene_presence_absence.csv, providing the presence-absence information in the different ECOR strains for all the identified genes (or locus) identified in the pangenome, and dataset_generation/results/pangenome_cds/cds_sequences.fa a multi-sequence fasta file containing all sequences of the coding sequences pangenome ; We also share the summary file dataset_generation/results/pangenome_cds/summary_statistics.txt
@@ -83,7 +86,8 @@ Running Piggy relies on the previous Roary run to create the pangenome of IGRs. 
 Then, we ran the following command line to obtain Piggy output 
 `piggy/bin/piggy --in_dir Gff_files --out_dir dataset_generation/results/pangenome_igr --roary_dir dataset_generation/results/pangenome_cds -t 5`
 Again, only the two main outputs of Piggy used in this project are shared on this reposistory: dataset_generation/results/pangenome_igr/IGR_presence_absence.csv and dataset_generation/results/pangenome_igr/pangenome_igr.fasta 
-The rest of the output is available on Zenodo: ADD LINK
+The rest of the output is available on Zenodo: 
+### TODO: ADD ZENODO link
 
 Finally, we concatenated the fasta outputs of Roary and Piggy to generate the whole pangenome, including both coding sequences and IGRs (dataset_generation/results/pangenome_whole/whole_pangenome.fasta)
 `cat dataset_generation/results/pangenome_cds/cds_sequences.fa dataset_generation/results/pangenome_igr/pangenome_igr.fasta > dataset_generation/results/pangenome_whole/whole_pangenome.fasta`
