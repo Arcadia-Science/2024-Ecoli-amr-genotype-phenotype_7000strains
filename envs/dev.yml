@@ -20,3 +20,9 @@ dependencies:
   - bwa=0.7.18
   - bcftools=1.20
   - prokka=1.14.6
+  - pandas=2.2.2
+  - numpy=2.0.0
+  - r-data.table=1.15.4
+  - jupyter=1.0.0
+  - r-base=4.3.2
+  - r-lintr=3.1.1
