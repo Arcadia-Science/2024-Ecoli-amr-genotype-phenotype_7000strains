@@ -1,0 +1,24 @@
+# Paralellizing the Python script extract_mpileup_info.py to extract DP per nucleotide information for all the strains of the study. This generates a .txt per strain.
+
+SAMP_DIR = "mpileup_files" #location of the mpileups files generated from the variant calling snakefile
+TXT_DIR = "coverage_txt" #location to store the generated .txt files
+
+# Obtain a list of mpileup files per strain 
+genomes_ids = glob_wildcards(SAMP_DIR + "/{genome_id}.mpileup").genome_id
+
+
+rule all:
+    input:
+        expand(TXT_DIR + "/{genome_id}.txt", genome_id=genomes_ids)
+
+rule extract_info:
+#use the extract_mpileup_info.py on each mpileup
+#in the shell command, you need the correct path to the Python script
+    input:
+        mpileup = SAMP_DIR + "/{genome_id}.mpileup"
+    output:
+        txt = TXT_DIR + "/{genome_id}.txt"
+    shell:
+        "python extract_mpileup_info.py {input.mpileup} {output.txt}"
+
+ 

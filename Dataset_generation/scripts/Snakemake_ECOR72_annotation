@@ -43,3 +43,4 @@ rule move_gff:
         gff_nw = GFF_DIR + "/{genome_id}.gff"
     shell:
         "cp {input.gff_or} {output.gff_nw}"
+        
