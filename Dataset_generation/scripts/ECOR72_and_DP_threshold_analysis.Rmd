@@ -6,7 +6,7 @@ output: html_notebook
 
 The pangenome used is this project has been generated from the 72 *E. coli* strains of the ECOR collection.
 The same 72 strains have been included in the variant calling, including the alignment process and the generation of the mpileup file (file containing the # of reads per nucleotide for a given sample for every nucleotide of the pangenome)
-
+In these file DP (or depth) refers to the number of reads associated with a nucleotide.
 Using these 72 strains and the associated mpileup files, we can now identify a good DP threshold based on read counts and the presence or absence of a locus in a strain. Indeed, for each of the 72 strains we know what pangenome loci are present or absent. Correlating this information with the average number of reads per locus can help identify whether or not a locus is present or absent in any given strain based on the number of reads for this locus for that strain. 
 
 ---

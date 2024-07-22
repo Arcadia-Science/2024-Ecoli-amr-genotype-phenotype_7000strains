@@ -8,7 +8,7 @@ VCF_DIR = "/vcf_files" #location where individual vcf files will be stored
 
 
 # Read genome IDs from a text file
-with open("/media/manon-morin/hot_swap_data_2/ecoli_full_run_part2/fastq_to_mpileup2_list.txt", "r") as file:
+with open("data_generation/data/sample_list_SRA.txt", "r") as file:
     genomes_ids = [line.strip() for line in file]
 
 # Define the final outputs
@@ -126,4 +126,5 @@ rule vcf_indexing:
         bcftools index {input.vcf}
         """
 
-        
+  
+    

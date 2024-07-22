@@ -109,7 +109,7 @@ We used the GNU Parallel shell tool and the fasterq-dump tool from the sra-toolk
 Variant calling aims to identify the differences between a strain and a reference genome by aligning sequencing reads of the strains against the reference and identifying where they differ. Variant calling algorithms then assess these differences to determine the likely genetic variations versus sequencing errors. The confirmed variants are then recorded in a Variant Call Format (VCF) file that lists the position of each variant in the genome, the nature of the genetic change, and the quality of the call. 
 
 **Variant calling on individual strains**
-We performed variant calling independently on eac strain againts the pangenome, and generated a VCF file for each of them.
+We performed variant calling independently on each strain againts the pangenome, and generated a VCF file for each of them.
 The variant calling workflow is integrated into a Snakefile `data_generation/scripts/variant_calling_pipeline`, allowing for efficient parallel processing of multiple samples.
 
 To run the snakefile, we used the following command:
@@ -134,20 +134,20 @@ TODO: mention where individual VCF files and intermediary files are available
 **Merging individual VCF.gz files**
 We merged all VCF files into a single VCF (`data_generation/results/vcf/merged_output_all.vcf.gz`). To do so, we first merged batches of 1,000 files using the `merge` function from bcftools. Each batch was then re-indexed before a final comprehensive merge was performed.
 
-To batch merge the VCF files, we first created 7 lists of 1000 strains as txt files, and for each list we used the following commands to merge and then index the VCF file (example with list1, but we ran the same command for the seven lists)
+To batch merge the VCF files, we first created 7 lists of 1000 strains as txt files, and for each list we used the following commands in the command line to merge and then index the VCF file (example with list1, but we ran the same command for the seven lists)
 
 ```{bash}
 nohup bcftools merge -O z -o dataset_generation/results/vcf/merged_output_list7.vcf.gz -l dataset_generation/data/vcf_merging/List_7_merging.txt > 2>&1 &
 bcftools index dataset_generation/results/vcf/merged_vcf/merged_output_list1.vcf.gz
 ```
 
-To eventually merge everything we ran the following command:
+To eventually merge everything we ran the following commands in the command line:
 
-```{bash}
-bcftools merge dataset_generation/results/vcf/merged_output_list1.vcf.gz dataset_generation/results/vcf/merged_output_list2.vcf.gz dataset_generation/results/vcf/merged_output_list3.vcf.gz dataset_generation/results/vcf/merged_output_list4.vcf.gz dataset_generation/results/vcf/merged_output_list5.vcf.gz dataset_generation/results/vcf/merged_output_list6.vcf.gz dataset_generation/results/vcf/merged_output_list7.vcf.gz -O z -o dataset_generation/results/vcf/merged_output_all.vcf.gz
 
-bcftools index dataset_generation/results/vcf/merged_output_all.vcf.gz
-```
+`bcftools merge dataset_generation/results/vcf/merged_output_list1.vcf.gz dataset_generation/results/vcf/merged_output_list2.vcf.gz dataset_generation/results/vcf/merged_output_list3.vcf.gz dataset_generation/results/vcf/merged_output_list4.vcf.gz dataset_generation/results/vcf/merged_output_list5.vcf.gz dataset_generation/results/vcf/merged_output_list6.vcf.gz dataset_generation/results/vcf/merged_output_list7.vcf.gz -O z -o dataset_generation/results/vcf/merged_output_all.vcf.gz`
+
+`bcftools index dataset_generation/results/vcf/merged_output_all.vcf.gz`
+
 
 
 ##### Filtering variants
@@ -175,7 +175,7 @@ Then, using the custom  Python script `data_generation/scripts/numpy_merge_ecor.
 
 `nohup python data_generation/scripts/numpy_merge_ecor.py > 2>&1 &`
 
-We further used the custom R script `data_generation/scripts/Ecor72_averaging_locusDP.ipynb` to calculate the average read depth per locus for each strain as the sum of reads per nucleotide for a locus divided by the locus length.  
+We further used the custom R notebook `data_generation/scripts/Ecor72_averaging_locusDP.ipynb` to calculate the average read depth per locus for each strain as the sum of reads per nucleotide for a locus divided by the locus length.  
 
 *3-Calulating the locus-level DP threshold associated with the presence/absence of a locus*
 Finally, in the R notebook `data_generation/scripts/ECOR72_and_DP_threshold_analysis.Rmd` we assessed locus read depth patterns in relation to the loci's presence-absence status by integrating read depth and presence-absence data for each locus across all 72 ECOR strains. 
