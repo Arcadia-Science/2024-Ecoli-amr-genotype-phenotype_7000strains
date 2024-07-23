@@ -1,4 +1,4 @@
-# TODO: Creating a 7000 species genotype-phenotype dataset of *E. coli*  and antimicrobial resistance phenotype
+# Creating a 7000 species genotype-phenotype dataset of *E. coli*  and antimicrobial resistance phenotype
 
 [![run with conda](http://img.shields.io/badge/run%20with-conda-3EB049?labelColor=000000&logo=anaconda)](https://docs.conda.io/projects/miniconda/en/latest/)
 [![Snakemake](https://img.shields.io/badge/snakemake--green)](https://snakemake.readthedocs.io/en/stable/)
@@ -41,7 +41,7 @@ conda env export --from-history --no-builds > envs/dev.yml
 
 TODO: Add details about the description of input / output data and links to Zenodo depositions, if applicable.
 
-If you want to reproduce this work or access the data, please download the corresponding folder from Zenodo (ADD LINK). The paths mentioned in this ReadMe refer to the organization of the Zenodo folder, which is mirrored in this GitHub repository as well and we have included relevant data here when their size permits.
+If you want to reproduce this work or access the data, please download the corresponding folder from Zenodo (ADD LINK). The paths mentioned in this ReadMe refer to the organization of the Zenodo folder, which is mirrored in this GitHub repository as well, and we have included relevant data here when their size permits.
 
 ## Overview
 
@@ -96,18 +96,148 @@ Eventually, we indexed the pangenome using `bwa index`
 `bwa index dataset_generation/results/pangenome_whole/whole_pangenome.fasta`
 
 ##### Download of sequencing reads from SRA
-To come
 
-##### Variant Calling in 7055 samples and merging
-To come
+We obtained the SRA accession numbers for the sequencing files of the 7,055 selected strains (6,983 strains from the population and 72 strains from the ECOR collection).
+`dataset_generation/data/sample_list_SRA.csv`
+
+We used the GNU Parallel shell tool and the fasterq-dump tool from the sra-toolkit (https://github.com/ncbi/sra-tools/wiki/01.-Downloading-SRA-Toolkit), and downloaded the FASTQ files from paired-end sequencing for each strain. 
+
+`parallel -j 64 fasterq-dump {} ::: $(cat sample_list_SRA.csv` 
+
+##### Variant Calling in 7,055 samples and merging of individual variant calling format (VCF) files
+
+Variant calling aims to identify the differences between a strain and a reference genome by aligning sequencing reads of the strains against the reference and identifying where they differ. Variant calling algorithms then assess these differences to determine the likely genetic variations versus sequencing errors. The confirmed variants are then recorded in a Variant Call Format (VCF) file that lists the position of each variant in the genome, the nature of the genetic change, and the quality of the call. 
+
+**Variant calling on individual strains**
+We performed variant calling independently on each strain againts the pangenome, and generated a VCF file for each of them.
+The variant calling workflow is integrated into a Snakefile `data_generation/scripts/variant_calling_pipeline`, allowing for efficient parallel processing of multiple samples.
+
+To run the snakefile, we used the following command:
+`nohup snakemake -s dataset_generation/scripts/variant_calling_pipeline --cores 54 > variant_calling.txt 2>&1 &`
+ 
+The different steps of the workflow include (for each strain):
+	-> input file: whole genome paired fastq files R1 and R2
+	- fastq quality control, trimming of common Illumina adapter, filtering short reads using FastP (https://doi.org/10.1002/imt2.107)
+	- concatenation of filtered fastq1 and fastq2  -> intermediary file saved
+	- alignment against the pangenome using bwa mem (
+https://doi.org/10.48550/arXiv.1303.3997) -> intermediary file saved
+	- sorting and marking duplicates in alignment files using Samtools (https://doi.org/10.1093/gigascience/giab008)
+	- addition of RG tags using Picard (https://broadinstitute.github.io/picard/)
+	- files indexing using Samtools
+	- generating mpileup files using bcftools (https://doi.org/10.1093/gigascience/giab008) -> intermediary file saved
+	- variant calling on mpileup file using bcftools and generation of VCF file
+	- indexing VCF file
+    -> output: VCF file 
+
+TODO: mention where individual VCF files and intermediary files are available 
+
+**Merging individual VCF.gz files**
+We merged all VCF files into a single VCF (`data_generation/results/vcf/merged_output_all.vcf.gz`). To do so, we first merged batches of 1,000 files using the `merge` function from bcftools. Each batch was then re-indexed before a final comprehensive merge was performed.
+
+To batch merge the VCF files, we first created 7 lists of 1000 strains as txt files, and for each list we used the following commands in the command line to merge and then index the VCF file (example with list1, but we ran the same command for the seven lists)
+
+```{bash}
+nohup bcftools merge -O z -o dataset_generation/results/vcf/merged_output_list7.vcf.gz -l dataset_generation/data/vcf_merging/List_7_merging.txt > 2>&1 &
+bcftools index dataset_generation/results/vcf/merged_vcf/merged_output_list1.vcf.gz
+```
+
+To eventually merge everything we ran the following commands in the command line:
+
+
+`bcftools merge dataset_generation/results/vcf/merged_output_list1.vcf.gz dataset_generation/results/vcf/merged_output_list2.vcf.gz dataset_generation/results/vcf/merged_output_list3.vcf.gz dataset_generation/results/vcf/merged_output_list4.vcf.gz dataset_generation/results/vcf/merged_output_list5.vcf.gz dataset_generation/results/vcf/merged_output_list6.vcf.gz dataset_generation/results/vcf/merged_output_list7.vcf.gz -O z -o dataset_generation/results/vcf/merged_output_all.vcf.gz`
+
+`bcftools index dataset_generation/results/vcf/merged_output_all.vcf.gz`
+
+
 
 ##### Filtering variants
-To come
+
+To ensure the accuracy and relevance of genetic data, it's essential to filter variants and minimize false positives. This involves removing low-quality variants by applying specific thresholds for read depth and quality scores, for instance. In this study, we aimed to implement reasonable filtering criteria that control for false positives without being overly stringent, thus avoiding excluding too many true positives. We applied two filters: QUAL and DP. The QUAL filter corresponds to the quality score of the variant calling process, reflecting confidence in the detected variant at a given position. We set the QUAL threshold at 30, representing a 99.9% probability that the variant is correctly identified, thereby filtering out any variant calls with a lower score. The DP filter represents the total read depth at the variant's position, reflecting the volume of data supporting the variant. 
+
+** Determining the DP threshold **
+
+We established this threshold based on the coverage data from the 72 ECOR strains used to generate the pangenome and our understanding of the presence or absence of each locus of the pangenome in these strains.
+
+We defined the DP threshold as the minimum number of reads required to confidently assert the presence of a nucleotide (and, by extension, the locus) in a strain. To calculate this threshold, we analyzed the presence-absence data for the 72 ECOR strains, incorporating the coverage depth observed for each nucleotide that mapped against the pangenome.
+
+*1-Extracting DP information at each nucleotide*
+First we needed to extract the Locus, Position, and depth information for each nucleotide from the mpileup files of each strains. 
+To do so, we wrote a custom Python script `data_generation/scripts/extract_mpileup_info.py` that obtains this information for individual strains, and used it within a snakefile (`data_generation/scripts/sequencing_depth_info_extraction`) to process individual mpileups in parallel. 
+Briefly, this Python script opens a mpileup file into a panda dataframe (skipping all the comments lines at the beginning of the mpileup), turns the DP values into numerics, and then extracts only the columns for CHROM (which corresponds to the locus name), POS (which corresponds to the position of the nucleotide in CHROM) and DP (which corresponds to the sequencing depth for this nucleotide). Finally, this is saved into a tab delimited file.
+
+We ran the snakefile using the following command line:
+
+`nohup snakemake -s sequencing_depth_info --cores 54 > extracting_DP.txt 2>&1 &`
+
+*2-Calulating average read depth per locus in ECOR strains*
+
+Then, using the custom  Python script `data_generation/scripts/numpy_merge_ecor.py`, we consolidated all the nucleotide-level DP information of the 72 ECOR strains into a single file `data_generation/results/ecor72_DP/ecor72_array.txt`.
+
+`nohup python data_generation/scripts/numpy_merge_ecor.py > 2>&1 &`
+
+We further used the custom R notebook `data_generation/scripts/Ecor72_averaging_locusDP.ipynb` to calculate the average read depth per locus for each strain as the sum of reads per nucleotide for a locus divided by the locus length.  
+
+*3-Calulating the locus-level DP threshold associated with the presence/absence of a locus*
+Finally, in the R notebook `data_generation/scripts/ECOR72_and_DP_threshold_analysis.Rmd` we assessed locus read depth patterns in relation to the loci's presence-absence status by integrating read depth and presence-absence data for each locus across all 72 ECOR strains. 
+Based on the results we chose a DP threshold of 19.28 that indicates that any nucleotide or locus with a read depth exceeding 19.28 is confidently considered present.
+
+** Filtering **
+
+We filtered the variants using the chosen DP and QUAL thresholds and generated and indexed the VCF file with filtered variants (`data_generation/results/vcf/filtered_output.vcf.gz`)
+
+`bcftools view -i 'QUAL >= 30 & DP > 21.81' data_generation/results/vcf/merged_output_all.vcf.gz’| bgzip -c > data_generation/results/vcf/filtered_output.vcf.gz`
+
+and indexed the VCF file
+
+`bcftools index data_generation/results/vcf/filtered_output.vcf.gz`
 
 ##### Variant annotation
-To come
+
+We used SnpEff (https://doi.org/10.4161/fly.19695) to annotate variants within the pangenome's coding sequences. SnpEff analyzes input variants from a VCF file by annotating them based on a predefined database that includes genes, gene annotations, and gene sequence information. 
+
+** Installing SnpEff **
+First, we downloaded and installed SnpEff
+`wget https://snpeff.blob.core.windows.net/versions/snpEff_latest_core.zip`
+
+`unzip snpEff_latest_core.zip`
+
+** Annotating pangenome’s CDS sequences with Prokka **
+
+To run SnpEff on our data, we first needed to create a custom database form the pangenome. To generate this databse, we needed a GFF file describing the genes or CDS in the pangenome. Thus, we used Prokka to annotate these CDS sequences (or genes), running:
+
+`prokka --force --outdir data_generation/data/pangenome_cds  --prefix genes data_generation/data/pangenome_cds/pangenome_cds.fa`
+
+This generated the gff file: `data_generation/results/pangenome_cds/genes.gff`
+
+** Creating the custom database for the pangenome **
+
+We generated our custom database from our pangenome following the directions detailed on the SnpEff website and edited the snpEff.config accordingly.
+
+We created the custom database utilizing the GFF format annotation file and used the options `-noCheckCds -noCheckProtein` to bypass checks for transcript and protein sequence information.
+To create the database, we ran:
+` java -jar snpEff.jar build -gff3 -v ecor72 -noCheckCds -noCheckProtein`
+
+And we checked if the database was created by running:
+`java -jar snpEff.jar dump ecor72 | less`
+
+** Annotating the variants **
+
+Once the database has been created, we annotated the filtered VCF file by running:
+
+` nohup sh -c 'java -Xmx32g -jar snpEff.jar eff -s annot_summary_filtered.html data_generation/results/vcf/filtered_output.vcf.gz | bgzip > data_generation/results/vcf/annotated_output.vcf.gz ' > nohup.out 2>&1 &`
+
+** Filtering nonsilent variants **
+
+We used SnpSift (https://doi.org/10.3389/fgene.2012.00035), a component of the SnpEff suite, to filter and refine annotated VCF files. We excluded silent mutations to retain only variants associated with missense, nonsense, and frameshift mutations, resulting in the curated file (`data_generation/results/vcf/output.non_silent.vcf.gz`).
+
+We ran:
+`java -jar SnpSift.jar filter "(ANN[*].EFFECT has '\''missense_variant'\'' | ANN[*].EFFECT has '\''nonsense_variant'\'' | ANN[*].EFFECT has '\''frameshift_variant'\'')" data_generation/results/vcf/annotated_output.vcf.gz | bgzip > data_generation/results/vcf/output.non_silent.vcf.gz`
+
 
 #### Phenotype distribution analysis
+To come
+
+#### Variants distribution analysis
 To come
 
 #### Antimicrobial resistance analysis

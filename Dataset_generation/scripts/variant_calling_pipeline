@@ -1,0 +1,130 @@
+# Directory and file configuration
+FASTQ_DIR = "/fastq"  #location of all the strain sequencing files 
+FASTQ_FIL = "/fastq_filtered" #location where filtered fastq and concatenated fastq will be stored
+BAM_DIR = "/bam_files" #location where bam files will be stored
+MPILEUP_DIR = "/mpileup_files" #location where mpileups files will be stored
+VCF_DIR = "/vcf_files" #location where individual vcf files will be stored
+
+
+
+# Read genome IDs from a text file
+with open("data_generation/data/sample_list_SRA.txt", "r") as file:
+    genomes_ids = [line.strip() for line in file]
+
+# Define the final outputs
+rule all:
+    input:
+        expand(FASTQ_FIL + "/{genome_id}_fastp_1.fastq", genome_id=genomes_ids),
+        expand(FASTQ_FIL + "/{genome_id}_fastp_2.fastq", genome_id=genomes_ids),
+        expand(FASTQ_FIL + "/{genome_id}_concat.fastq", genome_id=genomes_ids),
+        expand(BAM_DIR + "/{genome_id}_rg.bam", genome_id=genomes_ids),
+        expand(BAM_DIR + "/{genome_id}_rg.bam.bai", genome_id=genomes_ids),
+        expand(MPILEUP_DIR + "/{genome_id}.mpileup", genome_id=genomes_ids),
+        expand(VCF_DIR + "/{genome_id}.vcf.gz", genome_id=genomes_ids),
+        expand(VCF_DIR + "/{genome_id}.vcf.gz.csi", genome_id=genomes_ids)
+
+
+
+# Pre-processing: Trimming and filtering reads
+rule trim_and_filter:
+### Here,we trim the Illumina adapters (ILLUMINACLIP:TruSeq3-SE:2:30:10), remove any reads that has a Phred score lower than 30 on a sliding window of 4 bases, remove any read shorter than 30bases
+    input:
+        fastq_1= FASTQ_DIR + "/{genome_id}_1.fastq",
+        fastq_2= FASTQ_DIR + "/{genome_id}_2.fastq"
+    output:
+        fastp_1_fastq=temporary(FASTQ_FIL + "/{genome_id}_fastp_1.fastq"),
+        fastp_2_fastq=temporary(FASTQ_FIL + "/{genome_id}_fastp_2.fastq")
+    shell:
+        "fastp -i {input.fastq_1} -I {input.fastq_2}  -o {output.fastp_1_fastq} -O {output.fastp_2_fastq} -q 30 -u 50 --length_required 30 --correction" 
+
+rule concat_fastq:
+#Concatenating fastq_1 and _2 into a single fastq file to be processed as single end and not paired-end
+    input:
+        fastp_1_fastq=FASTQ_FIL + "/{genome_id}_fastp_1.fastq",
+        fastp_2_fastq=FASTQ_FIL + "/{genome_id}_fastp_2.fastq"
+    output:
+        fastp_concat=temporary(FASTQ_FIL + "/{genome_id}_concat.fastq")
+    shell:
+        "cat {input.fastp_1_fastq} {input.fastp_2_fastq} > {output.fastp_concat}"
+
+rule aln_bwa:
+### This treats the fastq as single end
+### The reference pangenome must have been indexed with bwa index.
+### In the same rule, this proceeds to the alignment, sorting the alignment file and marking duplocates
+    input:
+        fastp_concat= FASTQ_FIL + "/{genome_id}_concat.fastq"
+    output:
+        bam_mk= temporary(BAM_DIR + "/{genome_id}.bam")
+    params:
+        ref="dataset_generation/results/pangenome_whole/whole_pangenome.fasta",
+        tmp_dir="/tmp_sort" #create a temporary folder to store temporary files generated during the annotation process
+    shell:
+        """
+        bwa mem -M -t 10 {params.ref} {input.fastp_concat} | 
+        samtools sort -O bam -T {params.tmp_dir} - | 
+        samtools markdup - {output.bam_mk}
+        """
+
+
+rule adding_rg:
+### Adding @RG tags
+### This part is just adding tags that corresponds to sample name to make sure is file is tracked properly
+### Need to update path to picard jar file
+    input:
+        bam_mk=BAM_DIR + "/{genome_id}.bam"
+    output:
+        bam_rg=BAM_DIR + "/{genome_id}_rg.bam"
+    params:
+        picard_path="picard.jar", #update with path to picard.jar file
+        sample="{genome_id}"
+    shell:
+        "java -jar {params.picard_path} AddOrReplaceReadGroups I={input.bam_mk}  O={output.bam_rg} RGID=4 RGLB=lib1 RGPL=illumina RGPU=unit1 RGSM={params.sample}"
+
+rule bam_index:
+### Indexing the alignment file Adding 
+    input:
+        bam_rg= BAM_DIR + "/{genome_id}_rg.bam"
+    output:
+        bam_idx=BAM_DIR + "/{genome_id}_rg.bam.bai"
+    shell:
+        "samtools index {input.bam_rg}"
+
+
+rule mpileup_files:
+### mpileup file generation
+    input:
+        bam_file= BAM_DIR + "/{genome_id}_rg.bam"
+    output:
+        mpileup= MPILEUP_DIR + "/{genome_id}.mpileup"
+    params:
+        ref="dataset_generation/results/pangenome_whole/whole_pangenome.fasta"
+    #benchmark:
+        #BCM_DIR + "/mpileup_{genome_id}.txt"
+    shell:
+        "bcftools mpileup -f {params.ref} {input.bam_file} > {output.mpileup}" 
+
+
+rule mpile_and_calling:
+### generating VCF from mpileups
+    input:
+        mpileup=MPILEUP_DIR + "/{genome_id}.mpileup"
+    output:
+        vcf_file=VCF_DIR + "/{genome_id}.vcf.gz"
+    shell:
+        """
+        bcftools call --ploidy 1 -mv -O z -o {output.vcf_file} < {input.mpileup}
+        """
+
+rule vcf_indexing:
+### Indexing VCF
+    input:
+        vcf=VCF_DIR + "/{genome_id}.vcf.gz"
+    output:
+        index_file = VCF_DIR + "/{genome_id}.vcf.gz.csi"
+    shell:
+        """
+        bcftools index {input.vcf}
+        """
+
+  
+    

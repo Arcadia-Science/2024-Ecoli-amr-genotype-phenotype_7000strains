@@ -1,0 +1,124 @@
+---
+title: "Presence/Absence analysis for the 72 ECOR strain of the pangenome"
+output: html_notebook
+---
+### Objective 
+
+The pangenome used is this project has been generated from the 72 *E. coli* strains of the ECOR collection.
+The same 72 strains have been included in the variant calling, including the alignment process and the generation of the mpileup file (file containing the # of reads per nucleotide for a given sample for every nucleotide of the pangenome)
+In these file DP (or depth) refers to the number of reads associated with a nucleotide.
+Using these 72 strains and the associated mpileup files, we can now identify a good DP threshold based on read counts and the presence or absence of a locus in a strain. Indeed, for each of the 72 strains we know what pangenome loci are present or absent. Correlating this information with the average number of reads per locus can help identify whether or not a locus is present or absent in any given strain based on the number of reads for this locus for that strain. 
+
+---
+
+```{r}
+library(tidyverse)
+library(data.table)
+library(arcadiathemeR)
+
+```
+
+--- 
+
+## Data import
+
+### ECOR72 read depth information
+```{r}
+
+#Locus Depth Coverage information for each 72 ECOR strains (divided into two csv files)
+coverage_40=read.csv('dataset_generation/data/dp_threshold/average_coverage_41.csv')[,-1]
+coverage_32=read.csv('dataset_generation/data/dp_threshold/average_coverage_last32.csv')[,-1]
+
+average=left_join(coverage_40, coverage_32, by='LOCUS')
+
+```
+
+### Presence-absence of pangenome loci
+
+In the pangenome, the ECOR strains are identified by their Genome accession ID, while in the coverage file they are identified by the sequencing file SRA accession number. We have to change the names to make them consistent and be able to connect coverage data and presence-absence data
+
+```{r}
+#Presence-Absence information of the different loci in the ECOR strains
+pan_pres_ab=read.csv('dataset_generation/data/dp_threshold/whole_pan_ecor_presence_absence.csv')[,-1]
+
+# Document with the correspondence between genome accession ID and SRA accession ID
+
+GCA_to_SRA=read.csv('pangenome_genomes_SRA_GCA.csv')
+
+# Changing the column names in pan_pres_ab to match SRA accession
+
+  ## First we need to remove the '_ASMXXXv1' part of the name
+current_names=colnames(pan_pres_ab)
+
+short_names=gsub("_ASM\\d+v1", "", current_names)
+
+colnames(pan_pres_ab) <- short_names
+
+colnames(pan_pres_ab)
+
+# Create a vector of new column names based on mapping_table
+new_colnames <- sapply(colnames(pan_pres_ab), function(colname) {
+  if (colname %in% GCA_to_SRA$GCA) {
+    return(GCA_to_SRA$SRA[GCA_to_SRA$GCA == colname])
+  } else {
+    return(colname)
+  }
+})
+
+# Assign the new column names to df1
+colnames(pan_pres_ab) <- unlist(new_colnames)
+colnames(pan_pres_ab)
+
+```
+
+### Averaged number of reads per nucleotides of present/absent loci
+
+We now investigate the number of reads per locus in regards to presence absence status.
+Here the average has been calculated independently of the covered fraction information. 
+
+```{r}
+# First we format the average data 
+
+aver_format=average %>%
+  gather(Strain, Average, SRR3989531:SRR7819146)
+
+colnames(aver_format)=c('Locus',"Strain",'Average')
+
+# We format the presence-absence data
+
+pres_ab_format=pan_pres_ab%>%
+  gather(Strain,Presence,SRR3989541:SRR3989507)
+
+# We merge information
+
+all_and_pres=merge(aver_format, pres_ab_format, by=c('Locus','Strain'))
+
+```
+
+### Visualization and statistics of distribution of coverage of Present and Absent loci
+```{r}
+# Violin plot
+
+plot_vio_av=ggplot(all_and_pres, aes(x=Presence, y=Average, fill=Presence))+
+  geom_violin()+
+  theme_arcadia(x_axis_type = "categorical") +
+  scale_fill_arcadia(palette_name = "primary")
+
+plot_vio_av
+```
+```{r}
+# Coverage and Present loci
+av_pres=subset(all_and_pres, all_and_pres$Presence=="Present")
+summary(av_pres)
+sd(av_pres$Average)
+
+# Coverage and Absent loci
+av_abs=subset(all_and_pres, all_and_pres$Presence=="Absent")
+summary(av_abs)
+sd(av_abs$Average)
+
+```
+
+```{r}
+sessionInfo()
+```
