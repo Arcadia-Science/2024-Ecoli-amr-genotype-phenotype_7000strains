@@ -1,4 +1,4 @@
-# Creating a 7000 species genotype-phenotype dataset of *E. coli*  and antimicrobial resistance phenotype
+# Creating a 7000 strains genotype-phenotype dataset of *E. coli*  and antimicrobial resistance phenotype
 
 [![run with conda](http://img.shields.io/badge/run%20with-conda-3EB049?labelColor=000000&logo=anaconda)](https://docs.conda.io/projects/miniconda/en/latest/)
 [![Snakemake](https://img.shields.io/badge/snakemake--green)](https://snakemake.readthedocs.io/en/stable/)
@@ -7,7 +7,7 @@
 
 In this work, we aimed to produce a large-scale genotype-phenotype dataset that can be used as a resource to serve as a testbed for developing further strategies in genotype-phenotype investigations or evolutionary research.
 
-We leveraged the genetic information and antimicrobial resistance (AMR) phenotype data available for the bacterium *Escherichia coli* to construct our dataset, and took advantage of the existing knowledge about genetic variations and AMR phenotypes to validate our approach and dataset. We performed variant calling and compiled a genotype-phenotype dataset for more than 7,000 *E. coli* strains. Briefly, variant calling consists of identifying all genetic variations and their associated genotypes in a population compared to a reference genome. This is performed by aligning sequencing reads for each sample of the population against a reference genome, then identifying polymorphic regions in the population, and finally characterizing variants and their genotypes at each of these polymorphic regions.
+We leveraged the genetic information and antimicrobial resistance (AMR) phenotype data available for the bacterium *Escherichia coli* to construct our dataset, and took advantage of the existing knowledge about genetic variations and AMR phenotypes to validate our approach and dataset. We performed variant calling and compiled a genotype-phenotype dataset for more than 7,000 *E. coli* strains. Briefly, variant calling consists of identifying all genetic variations and their associated genotypes in a cohort compared to a reference genome. This is performed by aligning sequencing reads for each sample of the cohort against a reference genome, then identifying polymorphic regions in the cohort, and finally characterizing variants and their genotypes at each of these polymorphic regions.
 
 Here, we have generated a dataset that successfully revealed significant genetic diversity and identified 2.4 million variants. By focusing on non-silent variants within genes associated with AMR, we confirmed the dataset's accuracy and provided insights into specific mutations contributing to resistance to trimethoprim.
 
@@ -45,26 +45,26 @@ If you want to reproduce this work or access the data, please download the corre
 
 ## Overview
 
-The primary objective of this study was to integrate available genotypic and phenotypic data of *E. coli* to map genetic variations to known antimicrobial resistance (AMR) phenotypes. We first identified an *E. coli* population for which AMR phenotypes and genomes were documented, and we further characterized the phenotype distribution within our cohort. Then, given the genetic diversity observed in *E. coli*, we decided to construct a pangenome as a comprehensive reference and used it to conduct variant calling and characterize the genetic diversity across our population. Finally, we correlated the identified genetic variations with the known AMR phenotypes.
+The primary objective of this study was to integrate available genotypic and phenotypic data of *E. coli* to map genetic variations to known antimicrobial resistance (AMR) phenotypes. We first identified an *E. coli* cohort for which AMR phenotypes and genomes were documented, and we further characterized the phenotype distribution within our cohort. Then, given the genetic diversity observed in *E. coli*, we decided to construct a pangenome as a comprehensive reference and used it to conduct variant calling and characterize the genetic diversity across our cohort. Finally, we correlated the identified genetic variations with the known AMR phenotypes.
 
 ### Repo organization
 
 This repository is divided into two sections. 
 The first section, **dataset_generation**, includes the code and information necessary to build the genotype dataset and perform the variant calling when size permitted. It covers major steps like the generation of the reference pangenome used for variant calling, the variant calling pipeline applied to each of the 7,000 strains, the filtering of false positive variants, and the annotation of the variants. 
-The second section, **dataset_analysis**, includes the code and information used to process and analyze the dataset and generate figures for the Pub (https://doi.org/10.57844/arcadia-d2cf-ebe5). It includes the preliminary analysis of AMR phenotypes within the population, and the analysis of variants in regards to known AMR phenotypes.
+The second section, **dataset_analysis**, includes the code and information used to process and analyze the dataset and generate figures for the Pub (https://doi.org/10.57844/arcadia-d2cf-ebe5). It includes the preliminary analysis of AMR phenotypes within the cohort, and the analysis of variants in regards to known AMR phenotypes.
 
 ### Approach
 
-#### Population-wide variant calling
+#### Cohort-wide variant calling
 
-The first step to generate our dataset involved mapping out all the genetic variations within the population to a reference genome. This process led to the creation of a genotype matrix, which summarizes the genotype of each individual at each variant across the genome. The procedure included several key steps: selecting and constructing a reference genome against which genetic variants are identified, identifying genetic variants within each strain, integrating all the genetic variants and their corresponding genotypes from all strains to construct the genotype matrix, filtering false positives and annotating the variants.
+The first step to generate our dataset involved mapping out all the genetic variations within the cohort to a reference genome. This process led to the creation of a genotype matrix, which summarizes the genotype of each individual at each variant across the genome. The procedure included several key steps: selecting and constructing a reference genome against which genetic variants are identified, identifying genetic variants within each strain, integrating all the genetic variants and their corresponding genotypes from all strains to construct the genotype matrix, filtering false positives and annotating the variants.
 The codes and some data associated with this part are all shared in the **dataset_generation** folder of this repo. 
 To obtain the all input and output data and be able to recapitulate this analysis, please download the Zenodo repository
 ### TODO: ADD ZENODO link
 
 ##### Generation of the reference genome
 
-The selection of a good reference genome is important for genotype-phenotype analysis and the precise identification and annotation of genetic variants in the population. The reference genome must provide comprehensive coverage and accurately represent the genetic diversity of the population (https://doi.org/10.1099/mgen.0.001021). 
+The selection of a good reference genome is important for genotype-phenotype analysis and the precise identification and annotation of genetic variants in the cohort. The reference genome must provide comprehensive coverage and accurately represent the genetic diversity of the cohort (https://doi.org/10.1099/mgen.0.001021). 
 *E. coli* is a highly recombinogenic species, exhibiting high genetic diversity among its strains, so we need a reference genome that encompasses this global diversity. Therefore, we have generated a pangenome using the genomes of the ECOR collection, which consists of 72 *E. coli* strains isolated from a wide variety of hosts and geographical locations. This collection offers a broad representation of the natural diversity of the species (https://doi.org/10.1128/jb.157.2.690-693.1984).
 
 From these strains, we constructed a pangenome containing both coding sequences and intergenic regions (IGRs). 
@@ -78,7 +78,7 @@ Next, we used Roary to create the pangenome of coding sequences. We created the 
 We ran the following command line:
 `roary -e --mafft -f dataset_generation/results/pangenome_cds -i 90 Gff_files/*.gff -p 8`  
 where Gff_files is the location of all the previously generated Prokka Gff files.
-The two main outputs of Roary used in this work are dataset_generation/results/pangenome_cds/gene_presence_absence.csv, providing the presence-absence information in the different ECOR strains for all the identified genes (or locus) identified in the pangenome, and dataset_generation/results/pangenome_cds/cds_sequences.fa a multi-sequence fasta file containing all sequences of the coding sequences pangenome ; We also share the summary file dataset_generation/results/pangenome_cds/summary_statistics.txt
+The two main outputs of Roary used in this work are dataset_generation/results/pangenome_cds/gene_presence_absence.csv, providing the presence-absence information in the different ECOR strains for all the identified genes (or contig) identified in the pangenome, and dataset_generation/results/pangenome_cds/cds_sequences.fa a multi-sequence fasta file containing all sequences of the coding sequences pangenome ; We also share the summary file dataset_generation/results/pangenome_cds/summary_statistics.txt
 The rest of the output is available on Zenodo: ADD LINK
 
 We further utilized Piggy (https://doi.org/10.1093/gigascience/giy015) to generate the pangenome of IGRs. We installed Piggy following the directions provided on the GitHub repository: https://github.com/harry-thorpe/piggy (`git clone https://github.com/harry-thorpe/piggy.git` - Commit Hash 68079ae1c310865d9d3a54221f8f3b3993329081). 
@@ -97,7 +97,7 @@ Eventually, we indexed the pangenome using `bwa index`
 
 ##### Download of sequencing reads from SRA
 
-We obtained the SRA accession numbers for the sequencing files of the 7,055 selected strains (6,983 strains from the population and 72 strains from the ECOR collection).
+We obtained the SRA accession numbers for the sequencing files of the 7,055 selected strains (6,983 strains from the cohort and 72 strains from the ECOR collection).
 `dataset_generation/data/sample_list_SRA.csv`
 
 We used the GNU Parallel shell tool and the fasterq-dump tool from the sra-toolkit (https://github.com/ncbi/sra-tools/wiki/01.-Downloading-SRA-Toolkit), and downloaded the FASTQ files from paired-end sequencing for each strain. 
@@ -156,30 +156,30 @@ To ensure the accuracy and relevance of genetic data, it's essential to filter v
 
 ** Determining the DP threshold **
 
-We established this threshold based on the coverage data from the 72 ECOR strains used to generate the pangenome and our understanding of the presence or absence of each locus of the pangenome in these strains.
+We established this threshold based on the coverage data from the 72 ECOR strains used to generate the pangenome and our understanding of the presence or absence of each contig of the pangenome in these strains.
 
-We defined the DP threshold as the minimum number of reads required to confidently assert the presence of a nucleotide (and, by extension, the locus) in a strain. To calculate this threshold, we analyzed the presence-absence data for the 72 ECOR strains, incorporating the coverage depth observed for each nucleotide that mapped against the pangenome.
+We defined the DP threshold as the minimum number of reads required to confidently assert the presence of a nucleotide (and, by extension, the contig) in a strain. To calculate this threshold, we analyzed the presence-absence data for the 72 ECOR strains, incorporating the coverage depth observed for each nucleotide that mapped against the pangenome.
 
 *1-Extracting DP information at each nucleotide*
 First we needed to extract the Locus, Position, and depth information for each nucleotide from the mpileup files of each strains. 
 To do so, we wrote a custom Python script `data_generation/scripts/extract_mpileup_info.py` that obtains this information for individual strains, and used it within a snakefile (`data_generation/scripts/sequencing_depth_info_extraction`) to process individual mpileups in parallel. 
-Briefly, this Python script opens a mpileup file into a panda dataframe (skipping all the comments lines at the beginning of the mpileup), turns the DP values into numerics, and then extracts only the columns for CHROM (which corresponds to the locus name), POS (which corresponds to the position of the nucleotide in CHROM) and DP (which corresponds to the sequencing depth for this nucleotide). Finally, this is saved into a tab delimited file.
+Briefly, this Python script opens a mpileup file into a panda dataframe (skipping all the comments lines at the beginning of the mpileup), turns the DP values into numerics, and then extracts only the columns for CHROM (which corresponds to the contig name), POS (which corresponds to the position of the nucleotide in CHROM) and DP (which corresponds to the sequencing depth for this nucleotide). Finally, this is saved into a tab delimited file.
 
 We ran the snakefile using the following command line:
 
 `nohup snakemake -s sequencing_depth_info --cores 54 > extracting_DP.txt 2>&1 &`
 
-*2-Calulating average read depth per locus in ECOR strains*
+*2-Calulating average read depth per contig in ECOR strains*
 
 Then, using the custom  Python script `data_generation/scripts/numpy_merge_ecor.py`, we consolidated all the nucleotide-level DP information of the 72 ECOR strains into a single file `data_generation/results/ecor72_DP/ecor72_array.txt`.
 
 `nohup python data_generation/scripts/numpy_merge_ecor.py > 2>&1 &`
 
-We further used the custom R notebook `data_generation/scripts/Ecor72_averaging_locusDP.ipynb` to calculate the average read depth per locus for each strain as the sum of reads per nucleotide for a locus divided by the locus length.  
+We further used the custom R notebook `data_generation/scripts/Ecor72_averaging_contigDP.ipynb` to calculate the average read depth per contig for each strain as the sum of reads per nucleotide for a contig divided by the contig length.  
 
-*3-Calulating the locus-level DP threshold associated with the presence/absence of a locus*
-Finally, in the R notebook `data_generation/scripts/ECOR72_and_DP_threshold_analysis.Rmd` we assessed locus read depth patterns in relation to the loci's presence-absence status by integrating read depth and presence-absence data for each locus across all 72 ECOR strains. 
-Based on the results we chose a DP threshold of 19.28 that indicates that any nucleotide or locus with a read depth exceeding 19.28 is confidently considered present.
+*3-Calulating the contig-level DP threshold associated with the presence/absence of a contig*
+Finally, in the R notebook `data_generation/scripts/ECOR72_and_DP_threshold_analysis.Rmd` we assessed contig read depth patterns in relation to the contigs's presence-absence status by integrating read depth and presence-absence data for each contig across all 72 ECOR strains. 
+Based on the results we chose a DP threshold of 19.28 that indicates that any nucleotide or contig with a read depth exceeding 19.28 is confidently considered present.
 
 ** Filtering **
 
@@ -233,15 +233,36 @@ We used SnpSift (https://doi.org/10.3389/fgene.2012.00035), a component of the S
 We ran:
 `java -jar SnpSift.jar filter "(ANN[*].EFFECT has '\''missense_variant'\'' | ANN[*].EFFECT has '\''nonsense_variant'\'' | ANN[*].EFFECT has '\''frameshift_variant'\'')" data_generation/results/vcf/annotated_output.vcf.gz | bgzip > data_generation/results/vcf/output.non_silent.vcf.gz`
 
+#### Data analysis
+The aim of this work is to generate a comprehensive dataset of *E. coli* strains genotypes and AMR phenotypes. While the previous steps have led to the generation of the genotype information within the cohort, the following steps focused on further exploring and characterizing the phenotype and genotype data. 
+First we explored general characteristics of the cohort (collection year, host, country of isolation, strain genome size) and distribution of the AMR phenotypes in the cohort, then we analyzed the variant population, and finally we investigated the correlation between variants within known antimicrobial resistance genes and the corresponding AMR phenotypes. 
+The following sections introduce the R notebooks that have been used to analyze the data. All notebooks are provided in both the .Rmd and regular .md format. The associated results are presented and discussed in the Pub: https://doi.org/10.57844/arcadia-d2cf-ebe5
 
-#### Phenotype distribution analysis
-To come
+##### Dataset characterization and phenotype distribution analysis
+We generated the R Notebook `data_analysis/scripts/Dataset_metainfo_AMR_analysis.md` to explore the cohort studied in our work.
+We first aimed to characterize different information in our *E. coli* cohort. This includes: strain genome size, number of CDS, year of isolation, country of isolation and host. Additionally, to gain insight into the prevalence and patterns of AMR phenotypes within the cohort, we examined the distribution of AMR phenotypes. This includes calculating the number of known AMR phenotypes per strain, the distribution of AMR phenotypes among the 21 antibiotics for which AMR data was available for more than 500 strains, and examining the presence of multi-drug resistant strains.
 
-#### Variants distribution analysis
-To come
+##### Variants distribution analysis
+Next, we characterized the variant population with the R notebook `data_analysis/scripts/Variant_population_analysis.md`.
+First, we explored variants within the cohort without distinguishing between silent and non-silent variants. We characterized how many variants were found in CDS contigs and how were found in intergenic regions (IGR), the variant rate per contig as well as the variant frequency.
+Then, we focused on variants annotated as non-silent. We explored the fraction of variation they represent within each contig, identified contigs associated with high non-silent variation rate and low non-silent variation mutation rates and performed functional analysis on these two groups.
 
-#### Antimicrobial resistance analysis
-To come
+##### Antimicrobial resistance analysis
+Finally, we investigated non-silent variants within contigs known to be associated with the resistance to three antibiotics. 
+We identified 7 contigs present in the pangenome and known to be associated with antibiotic resistance:
+- LMHECDEF_03475, annotated as	sul1 and associated with resistance to sulfonamide antibiotics
+- MFCAOJAD_04226, annotated as	blaTEM-16 and assocaited with resistance to	Beta-lactam antibiotics
+- LMHPMMMF_04732, annotated as	tet(A)_1 and associated with resistance to Tetracycline
+- FCDKFLAE_04147, annotated as	tet(A)_3 and associated with resistance to	Tetracycline
+- APHKLHJA_00520, annotated as	tet(A)_2 and associated with resistance to	Tetracycline
+- NGHFEPFE_01999, annotated as	dfrD and associated with resistance to	Trimethoprim
+- DHJNCGMO_04398, annotated as	catA1 and associated with resistance to	Chloramphenicol
+
+We first extracted the genotype information for these contigs specifically and generating a new vcf.gz file `data_analysis/data/resistance_output.non_silent.vcf.gz` using the following command line:
+
+`bcftools view -r LMHECDEF_03475,MFCAOJAD_04226,LMHPMMMF_04732,FCDKFLAE_04147,APHKLHJA_0052,NGHFEPFE_01999,DHJNCGMO_04398  data_generation/results/vcf/output.non_silent.vcf.gz -Oz -o data_analysis/data/resistance_output.non_silent.vcf.gz `
+
+Because sulfonamide and beta-lactam are a large class of antibiotics, we prefered to focus on specifically identified antibiotic, and we further focused on the variants associated with resistance to Chloramphenicol, Tetracycline and Trimethoprim. We used the R notebook `Antimicrobial_resistance_investigation.md` to investigate these variants and characterize their distribution in the cohort. Specifically, we aimed to analyzed, when available, the distribution of the antimicrobial resistance phenotypes for the strains that possess non-silent variants within these genes.
 
 
 **Tips for Developers**
