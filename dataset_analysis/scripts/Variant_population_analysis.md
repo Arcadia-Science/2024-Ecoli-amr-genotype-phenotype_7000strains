@@ -58,6 +58,10 @@ non-silent varaiations rates
 
     library(arcadiathemeR)
 
+    ## Loading Suisse fonts...
+
+    ## All custom fonts 'Suisse Int'l, Suisse Int'l Semi Bold, Suisse Int'l Medium, Suisse Int'l Mono' are successfully loaded.
+
 ------------------------------------------------------------------------
 
 # Investigation of the variant distribution
@@ -297,16 +301,16 @@ We start by investigating the non-silent variant frequency
     head(table_ns_strain,10)
 
     ##    nb_strain nb_variants_with_that_nb_strains_with_alt_allele
-    ## 1          1                                           250832
-    ## 2          2                                            86968
-    ## 3          3                                            47619
-    ## 4          4                                            41377
-    ## 5          5                                            26869
-    ## 6          6                                            21202
-    ## 7          7                                            14470
-    ## 8          8                                            12064
-    ## 9          9                                            11034
-    ## 10        10                                             9711
+    ## 1          1                                           258194
+    ## 2          2                                            90486
+    ## 3          3                                            49760
+    ## 4          4                                            43171
+    ## 5          5                                            28212
+    ## 6          6                                            22356
+    ## 7          7                                            15332
+    ## 8          8                                            12789
+    ## 9          9                                            11643
+    ## 10        10                                            10239
 
 ## Investigation of non-silent variants and fraction of non-silent variants per contig
 
@@ -374,18 +378,18 @@ the CDS in the pangenome.
 
     head(eggnog_high_rate,5)
 
-    ##          contigs numb_var_ns numb_var_all Type  len rate_var_all ratio  COG
-    ## 1 ABCDEHGJ_03231           2            2  CDS  591        295.5     1    S
-    ## 2 ABCDEHGJ_03370           1            1  CDS  264        264.0     1 <NA>
-    ## 3 ABCDEHGJ_03623           5            5  CDS  480         96.0     1 <NA>
-    ## 4 ABCDEHGJ_03939           1            1  CDS  903        903.0     1    M
-    ## 5 AIHHOGBN_03552           2            2  CDS 1164        582.0     1 <NA>
+    ##          contigs numb_var_ns numb_var_all Type len rate_var_all ratio  COG
+    ## 1 ABCDEHGJ_03231           2            2  CDS 591        295.5     1    S
+    ## 2 ABCDEHGJ_03370           1            1  CDS 264        264.0     1 <NA>
+    ## 3 ABCDEHGJ_03377           4            4  CDS 294         73.5     1 <NA>
+    ## 4 ABCDEHGJ_03623           5            5  CDS 480         96.0     1 <NA>
+    ## 5 ABCDEHGJ_03939           1            1  CDS 903        903.0     1    M
     ##                             Description
     ## 1 Type VI secretion system protein DotU
     ## 2                                  <NA>
     ## 3                                  <NA>
-    ## 4                             chaperone
-    ## 5                                  <NA>
+    ## 4                                  <NA>
+    ## 5                             chaperone
 
     eggnog_low=subset(eggnog_short, eggnog_short$query%in%CDS_rate_comp_low$contigs)
     colnames(eggnog_low)=c('contigs','COG','Description')
@@ -395,16 +399,16 @@ the CDS in the pangenome.
 
     ##          contigs numb_var_ns numb_var_all Type  len rate_var_all      ratio
     ## 1 ABCDEHGJ_03598           1           19  CDS 1299     68.36842 0.05263158
-    ## 2 AKJGLPIO_00079           1           12  CDS 1023     85.25000 0.08333333
-    ## 3 BCDBBOOO_01566           1           12  CDS 1227    102.25000 0.08333333
-    ## 4 BCDBBOOO_02541           1           10  CDS  267     26.70000 0.10000000
-    ## 5 BCDBBOOO_02935           1           16  CDS  363     22.68750 0.06250000
+    ## 2 AIHHOGBN_01876           2           28  CDS  189      6.75000 0.07142857
+    ## 3 AKJGLPIO_00079           1           12  CDS 1023     85.25000 0.08333333
+    ## 4 BCDBBOOO_01566           1           12  CDS 1227    102.25000 0.08333333
+    ## 5 BCDBBOOO_02541           1           10  CDS  267     26.70000 0.10000000
     ##    COG                                                 Description
     ## 1    K helix_turn_helix gluconate operon transcriptional repressor
     ## 2 <NA>                                                        <NA>
     ## 3 <NA>                                                        <NA>
-    ## 4    K                   Prophage CP4-57 regulatory protein (AlpA)
-    ## 5    H                        6-pyruvoyl tetrahydropterin synthase
+    ## 4 <NA>                                                        <NA>
+    ## 5    K                   Prophage CP4-57 regulatory protein (AlpA)
 
 To investigate potential biological functions associated with high and
 low non-silent mutation, we investigated within each dataset (high and
@@ -440,16 +444,16 @@ CDS it was found to be associated with.
     ## # A tibble: 10 × 4
     ##    COG_cat Count   prop group
     ##    <chr>   <int>  <dbl> <chr>
-    ##  1 -         104 40.3   high 
-    ##  2 C           3  1.16  high 
-    ##  3 E           4  1.55  high 
-    ##  4 F           2  0.775 high 
-    ##  5 G           8  3.10  high 
-    ##  6 H           1  0.388 high 
-    ##  7 I           1  0.388 high 
-    ##  8 J           2  0.775 high 
-    ##  9 K          11  4.26  high 
-    ## 10 L          19  7.36  high
+    ##  1 -         156 46.8   high 
+    ##  2 C           3  0.901 high 
+    ##  3 E           4  1.20  high 
+    ##  4 F           2  0.601 high 
+    ##  5 G           9  2.70  high 
+    ##  6 H           1  0.300 high 
+    ##  7 I           2  0.601 high 
+    ##  8 J           3  0.901 high 
+    ##  9 K          13  3.90  high 
+    ## 10 L          27  8.11  high
 
     egg_cat_low=egg_cat_inv(eggnog_low_rate)
     egg_cat_low$group='low'
@@ -457,18 +461,18 @@ CDS it was found to be associated with.
     head(egg_cat_low,10)
 
     ## # A tibble: 10 × 4
-    ##    COG_cat Count  prop group
-    ##    <chr>   <int> <dbl> <chr>
-    ##  1 -          11 9.32  low  
-    ##  2 A           1 0.847 low  
-    ##  3 C           3 2.54  low  
-    ##  4 D           6 5.08  low  
-    ##  5 E           2 1.69  low  
-    ##  6 F           3 2.54  low  
-    ##  7 G           7 5.93  low  
-    ##  8 H           4 3.39  low  
-    ##  9 J           1 0.847 low  
-    ## 10 K           8 6.78  low
+    ##    COG_cat Count   prop group
+    ##    <chr>   <int>  <dbl> <chr>
+    ##  1 -          15 11.6   low  
+    ##  2 A           1  0.775 low  
+    ##  3 C           3  2.33  low  
+    ##  4 D           6  4.65  low  
+    ##  5 E           2  1.55  low  
+    ##  6 F           3  2.33  low  
+    ##  7 G           7  5.43  low  
+    ##  8 H           4  3.10  low  
+    ##  9 J           1  0.775 low  
+    ## 10 K           8  6.20  low
 
     cog_fun_cat=read.csv('dataset_analysis/data/variant_analysis/COG_functional_categories.csv') # COG functional categories information
 
@@ -508,22 +512,22 @@ CDS it was found to be associated with.
     ## [1] stats     graphics  grDevices utils     datasets  methods   base     
     ## 
     ## other attached packages:
-    ##  [1] arcadiathemeR_0.1.0 ape_5.7-1           ggridges_0.5.6     
+    ##  [1] arcadiathemeR_0.1.0 ape_5.8             ggridges_0.5.6     
     ##  [4] seqinr_4.2-36       lubridate_1.9.3     forcats_1.0.0      
     ##  [7] stringr_1.5.1       dplyr_1.1.4         purrr_1.0.2        
     ## [10] readr_2.1.5         tidyr_1.3.1         tibble_3.2.1       
     ## [13] ggplot2_3.5.1       tidyverse_2.0.0    
     ## 
     ## loaded via a namespace (and not attached):
-    ##  [1] tidyselect_1.2.1  xfun_0.43         lattice_0.22-6    colorspace_2.1-0 
-    ##  [5] vctrs_0.6.5       generics_0.1.3    htmltools_0.5.8.1 yaml_2.3.8       
+    ##  [1] tidyselect_1.2.1  xfun_0.46         lattice_0.22-6    colorspace_2.1-1 
+    ##  [5] vctrs_0.6.5       generics_0.1.3    htmltools_0.5.8.1 yaml_2.3.10      
     ##  [9] utf8_1.2.4        rlang_1.1.4       pillar_1.9.0      glue_1.7.0       
     ## [13] withr_3.0.0       lifecycle_1.0.4   munsell_0.5.1     gtable_0.3.5     
-    ## [17] evaluate_0.23     labeling_0.4.3    knitr_1.46        tzdb_0.4.0       
-    ## [21] fastmap_1.1.1     parallel_4.2.3    fansi_1.0.6       highr_0.10       
-    ## [25] Rcpp_1.0.12       scales_1.3.0      showtext_0.9-7    sysfonts_0.8.9   
-    ## [29] farver_2.1.2      systemfonts_1.0.6 hms_1.1.3         digest_0.6.35    
-    ## [33] stringi_1.8.3     showtextdb_3.0    grid_4.2.3        ade4_1.7-22      
-    ## [37] cli_3.6.3         tools_4.2.3       magrittr_2.0.3    pkgconfig_2.0.3  
-    ## [41] MASS_7.3-60.0.1   timechange_0.3.0  rmarkdown_2.26    rstudioapi_0.16.0
-    ## [45] R6_2.5.1          nlme_3.1-164      compiler_4.2.3
+    ## [17] evaluate_0.24.0   labeling_0.4.3    knitr_1.48        tzdb_0.4.0       
+    ## [21] fastmap_1.2.0     extrafont_0.19    parallel_4.2.3    fansi_1.0.6      
+    ## [25] Rttf2pt1_1.3.12   highr_0.11        Rcpp_1.0.13       scales_1.3.0     
+    ## [29] farver_2.1.2      hms_1.1.3         digest_0.6.36     stringi_1.8.4    
+    ## [33] grid_4.2.3        ade4_1.7-22       cli_3.6.3         tools_4.2.3      
+    ## [37] magrittr_2.0.3    extrafontdb_1.0   pkgconfig_2.0.3   MASS_7.3-60.0.1  
+    ## [41] timechange_0.3.0  rmarkdown_2.27    rstudioapi_0.16.0 R6_2.5.1         
+    ## [45] nlme_3.1-164      compiler_4.2.3
