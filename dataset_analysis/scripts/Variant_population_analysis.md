@@ -131,7 +131,7 @@ on this specificity, we add a new column to tag CDS and IGR
 
 For each CDS or IGR we identify how many different positions are
 associated with genetic variations. This can be simply done by looking
-at how many time each cds name or igr name is seen in the table.
+at how many time each CDS name or IGR name is seen in the table.
 
     # Calculation of the number of variants per contig
 
@@ -156,8 +156,8 @@ at how many time each cds name or igr name is seen in the table.
     ## 9  ABCDEHGJ_01669       50  CDS
     ## 10 ABCDEHGJ_01671       21  CDS
 
-To compare the distribution of the number of variants per cds and per
-igr, we calculate variant rate that corresponds to the contig length (in
+To compare the distribution of the number of variants per CDS and per
+IGR, we calculate variant rate that corresponds to the contig length (in
 bp) divided by the number of variants in this contig.
 
     # We use the pangenome fasta file to obtain the size of each contig
@@ -178,7 +178,7 @@ bp) divided by the number of variants in this contig.
 
     table_nbvariant_rate$rate_var=table_nbvariant_rate$len/table_nbvariant_rate$numb_var
 
-    # Plot the distribution of variant rate per cds or igr
+    # Plot the distribution of variant rate per CDS or IGR
 
     viop_nbvar=ggplot(table_nbvariant_rate, aes(x=Type, y=rate_var, fill=Type))+
       geom_violin(alpha=0.5)+theme_arcadia(x_axis_type = "categorical")+ ylab('variant rate') +
@@ -195,7 +195,7 @@ bp) divided by the number of variants in this contig.
 
 ![](Variant_population_analysis_files/figure-markdown_strict/unnamed-chunk-5-1.png)
 
-**Main metrics of varianr rate for CDS contigs**
+**Main metrics of variant rate for CDS contigs**
 
     CDS_rate=subset(table_nbvariant_rate, table_nbvariant_rate$Type=='CDS')
     summary(CDS_rate$rate_var)
@@ -203,7 +203,7 @@ bp) divided by the number of variants in this contig.
     ##     Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
     ##    1.889    4.226    7.925   37.493   18.500 2250.000
 
-**Main metrics of varianr rate for IGR contigs**
+**Main metrics of variant rate for IGR contigs**
 
     IGR_rate=subset(table_nbvariant_rate, table_nbvariant_rate$Type=='IGR')
     summary(IGR_rate$rate_var)
@@ -316,12 +316,12 @@ We start by investigating the non-silent variant frequency
 
 We next investigate what fraction of variant in each contig is actually
 associated with non-silent variations. To do so, for each CDS, we
-calculate the ration of the number of non-silent variant in a contig to
+calculate the ratio of the number of non-silent variant in a contig to
 the total number of variants in this contig.  
-This information will highlight cds that still have high or low rates of
+This information will highlight CDS that still have high or low rates of
 non-silent variations. CDS dominated by non-silent variants may suggest
 positive selection for variants conferring advantageous traits. In
-contrast, cds predominantly containing silent variants likely highlight
+contrast, CDS predominantly containing silent variants likely highlight
 essential, conserved cellular functions where non-silent mutations would
 be deleterious and selected against.
 
@@ -349,7 +349,7 @@ be deleterious and selected against.
 
 ## Functional analysis of CDS associated with high and low non-silent mutation rates
 
-The functional analysis of the cds associated with high or low
+The functional analysis of the CDS associated with high or low
 non-silent mutation rates can add some interesting insight about what
 functions are prone to modifications in the cohort.
 
@@ -416,7 +416,7 @@ low rates) the distribution of the different COG functional categories.
 More specifically, we calculated for each COG category the percentage of
 CDS it was found to be associated with.
 
-       # Create a function that sorts the seen COG categories and how many times each category is annotated in the set of contig - The function also calculates the percentage of cds of the set, a given category is associated with
+       # Create a function that sorts the seen COG categories and how many times each category is annotated in the set of contig - The function also calculates the percentage of CDS of the set, a given category is associated with
 
     egg_cat_inv=function(df_egg_rate) {
       df_egg_rate[is.na(df_egg_rate)]<-"-"

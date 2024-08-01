@@ -29,7 +29,7 @@ library(ComplexHeatmap)
 
 ---
 
-# Importing and formating the data necessary for the analysis
+# Importing and formatting the data necessary for the analysis
 
 ## Importing the variant genotype matrix
 
@@ -63,7 +63,7 @@ head(ab_data[,1:10],10)
 ## Importing AMR contig variants general information
 
 Next, for each variant, we add information regarding 
-  - the number of allele
+  - the number of alleles
   - the number of strains with the alternative allele
   - the generic name of the AMR gene (catA1, tetA_3, etc...)
   - the antibiotic the variant is expected to confer resistance to
@@ -85,7 +85,7 @@ ab_data <- ab_data %>%
 ## Reformatting data to obtain by strain information 
 
 ab_data_rfmt=ab_data %>% gather(Strain,Called,ERR1197946:SRR850839)
-ab_data_rfmt=subset(ab_data_rfmt, ab_data_rfmt$Called!='.') #only keep entries when a alrernative allel was called
+ab_data_rfmt=subset(ab_data_rfmt, ab_data_rfmt$Called!='.') #only keep entries when a alternative allele was called
 
 head(ab_data_rfmt,10)
 
@@ -119,12 +119,13 @@ amr_phen_geneamr=subset(amr_phen_sra, amr_phen_sra$SRA.Accession%in%ab_data_rfmt
 
 # Phenotypes correlation
 
-The goal of the ext section is to evaluate the correlation between AMR phenotype for an antibiotic and the presence/absence of genetic variant in associated resistance gene. 
-Here, we focus on three antibiotics: chloramphenicol, trimethoprim and tetracycline. For each antibiotics, we have identified genetic variants and associated strains. Wgen the AMR phenotype is available for these strain-antibiotic combinations, we can evaluate whether these variations are associated with antimicrobial resistance.
+The goal of the next section is to evaluate the correlation between AMR phenotype for an antibiotic and the presence/absence of genetic variant in associated resistance genes. 
+Here, we focus on three antibiotics: chloramphenicol, trimethoprim and tetracycline. For each antibiotic, we have identified genetic variants and associated strains. When the AMR phenotype is available for these strain-antibiotic combinations, we can evaluate whether these variations are associated with antimicrobial resistance.
+To do so, we use an hypergeometric test to evaluate if the Resistant phenotype is significantly enriched within strains with variant in the AMR genes and available phenotype.
 
 ## Chloramphenicol
 ``` {r}
-# Subsetting variants within chloramphenicol resistance gene (catA1)
+# Sub-setting variants within chloramphenicol resistance gene (catA1)
 chlor_var=subset(ab_data_rfmt, ab_data_rfmt$Antibiotic=='Chloramphenicol')
 
 
@@ -144,7 +145,7 @@ chlor_amr
 
 N=dim(chlor_amr_all)[1] #number of strains with known AMR for Chloramphenicol
 K=dim(chlor_amr_res)[1] #number of strains with known AMR for chloramphenicol and that are associated with a Resistant phenotype
-n=dim(chlor_amr)[1] #number of strains with knwon AMR for chloramphenicol and that have a variant in catA1
+n=dim(chlor_amr)[1] #number of strains with known AMR for chloramphenicol and that have a variant in catA1
 k=dim(subset(chlor_amr,chlor_amr$chloramphenicol=='Resistant'))[1] #number of strains with known AMR and variant in catA1 and associated with Resistant phenotype
 
 p_value <- dhyper(k, K, N - K, n)
@@ -156,7 +157,7 @@ p_value
 
 ## Trimethoprim
 ``` {r}
-# Subseting variants within the Trimethoprim resistance gene drfD
+# Sub-setting variants within the Trimethoprim resistance gene drfD
 
 trim_var=subset(ab_data_rfmt, ab_data_rfmt$Antibiotic=='Trimethoprim') 
 
@@ -176,7 +177,7 @@ trim_amr
 
 N=dim(trim_amr_all)[1] #number of strains with known AMR for trimethoprim
 K=dim(trim_amr_res)[1] #number of strains with known AMR for trimethoprim and that are associated with a Resistant phenotype
-n=dim(trim_amr)[1] #number of strains with knwon AMR for trimethoprim and that have a variant in catA1
+n=dim(trim_amr)[1] #number of strains with known AMR for trimethoprim and that have a variant in catA1
 k=dim(subset(trim_amr,trim_amr$trimethoprim=='Resistant'))[1] #number of strains with known AMR and variant in catA1 and associated with Resistant phenotype
 
 p_value <- dhyper(k, K, N - K, n)
@@ -185,7 +186,7 @@ p_value
 
 ```
 
-Because the 40 strains for whcich we have variant and phenotype information are split between Susceptible and Resistant phenotypes, we investigated if specific positions within *dfrD* are associated with Resistance
+Because the 40 strains for which we have variant and phenotype information are split between Susceptible and Resistant phenotypes, we investigated if specific positions within *dfrD* are associated with Resistance
 ```{r}
 trim_amr_phen=na.omit(trim_amr)
 trim_var_phen=subset(trim_var, trim_var$Strain%in%trim_amr_phen$SRA.Accession)
@@ -199,6 +200,7 @@ df_hm=data.frame(pos=trim_var_phen$pos)
 ERR=c(colnames(trim_var_phen[,-1]))
 phen_loc=colnames(trim_var_phen)
 
+# Using a for loop, we prepare the matrix that identifies for each strain that has a variant in the *dfrD* contig, the location of the variant within the contig and the strain AMR phenotype to Trimethorpim 
 for (i in 1:length(ERR)){
   ERR_tmp=ERR[i]
   phen=subset(trim_amr_phen, trim_amr_phen$SRA.Accession==ERR_tmp)
@@ -234,7 +236,7 @@ Heatmap(mat, col = colors, name = "Categories",rect_gp = gpar(col = "white", lwd
 # Tetracycline
 
 ``` {r}
-# Subseting variants within Trimethoprim resistance genes (tet genes)
+# Sub-setting variants within Trimethoprim resistance genes (tet genes)
 tetra_var=subset(ab_data_rfmt, ab_data_rfmt$Antibiotic=='Tetracycline')
 
 # Selection of strains with known Tetracycline AMR phenotypes
@@ -253,7 +255,7 @@ tetra_amr
 
 N=dim(tetra_amr_all)[1] #number of strains with known AMR for tetracycline
 K=dim(tetra_amr_res)[1] #number of strains with known AMR for tetracycline and that are associated with a Resistant phenotype
-n=dim(tetra_amr)[1] #number of strains with knwon AMR for tetracycline and that have a variant in catA1
+n=dim(tetra_amr)[1] #number of strains with known AMR for tetracycline and that have a variant in catA1
 k=dim(subset(tetra_amr,tetra_amr$tetracycline=='Resistant'))[1] #number of strains with known AMR and variant in catA1 and associated with Resistant phenotype
 
 p_value <- dhyper(k, K, N - K, n)

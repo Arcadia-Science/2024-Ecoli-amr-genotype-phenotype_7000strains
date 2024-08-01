@@ -90,7 +90,7 @@ table_loc_vs_igr
 ## Calculation of variant rate per CDS and IGR
 
 For each CDS or IGR we identify how many different positions are associated with genetic variations.
-This can be simply done by looking at how many time each cds name or igr name is seen in the table. 
+This can be simply done by looking at how many time each CDS name or IGR name is seen in the table. 
 
 ```{r}
 # Calculation of the number of variants per contig
@@ -106,7 +106,7 @@ head(table_variant_per_contig,10)
 
 ```
   
-  To compare the distribution of the number of variants per cds and per igr, we calculate variant rate that corresponds to the contig length (in bp) divided by the number of variants in this contig.
+  To compare the distribution of the number of variants per CDS and per IGR, we calculate variant rate that corresponds to the contig length (in bp) divided by the number of variants in this contig.
 
 ```{r}
 
@@ -128,7 +128,7 @@ table_nbvariant_rate=left_join(table_variant_per_contig, contig_length_var, by='
 
 table_nbvariant_rate$rate_var=table_nbvariant_rate$len/table_nbvariant_rate$numb_var
 
-# Plot the distribution of variant rate per cds or igr
+# Plot the distribution of variant rate per CDS or IGR
 
 viop_nbvar=ggplot(table_nbvariant_rate, aes(x=Type, y=rate_var, fill=Type))+
   geom_violin(alpha=0.5)+theme_arcadia(x_axis_type = "categorical")+ ylab('variant rate') +
@@ -139,13 +139,13 @@ viop_nbvar
 
 ```
   
-**Main metrics of varianr rate for CDS contigs**
+**Main metrics of variant rate for CDS contigs**
 ```{r}
 CDS_rate=subset(table_nbvariant_rate, table_nbvariant_rate$Type=='CDS')
 summary(CDS_rate$rate_var)
 ```
   
-**Main metrics of varianr rate for IGR contigs**
+**Main metrics of variant rate for IGR contigs**
 ```{r}
 IGR_rate=subset(table_nbvariant_rate, table_nbvariant_rate$Type=='IGR')
 summary(IGR_rate$rate_var)
@@ -230,8 +230,8 @@ head(table_ns_strain,10)
   
 ## Investigation of non-silent variants and fraction of non-silent variants per contig
 
-We next investigate what fraction of variant in each contig is actually associated with non-silent variations. To do so, for each CDS, we calculate the ration of the number of non-silent variant in a contig to the total number of variants in this contig.  
-This information will highlight cds that still have high or low rates of non-silent variations. CDS dominated by non-silent variants may suggest positive selection for variants conferring advantageous traits. In contrast, cds predominantly containing silent variants likely highlight essential, conserved cellular functions where non-silent mutations would be deleterious and selected against. 
+We next investigate what fraction of variant in each contig is actually associated with non-silent variations. To do so, for each CDS, we calculate the ratio of the number of non-silent variant in a contig to the total number of variants in this contig.  
+This information will highlight CDS that still have high or low rates of non-silent variations. CDS dominated by non-silent variants may suggest positive selection for variants conferring advantageous traits. In contrast, cds predominantly containing silent variants likely highlight essential, conserved cellular functions where non-silent mutations would be deleterious and selected against. 
 
 ```{r}
 # Calculating the number of non-silent variant per annotated CDS
@@ -258,7 +258,7 @@ dens_ratio
   
 ## Functional analysis of CDS associated with high and low non-silent mutation rates
 
-The functional analysis of the cds associated with high or low non-silent mutation rates can add some interesting insight about what functions are prone to modifications in the cohort.  
+The functional analysis of the CDS associated with high or low non-silent mutation rates can add some interesting insight about what functions are prone to modifications in the cohort.  
 
 Here we defined 'High' non-silent mutation rate has the CDS for which non-silent variants represented 90% or more of the variants in a CDS. Conversly, we defined low non-silent mutation rate as the CDS for which non-silent variants represented 10% or less of the variants of a contig.
 
@@ -294,7 +294,7 @@ head(eggnog_low_rate,5)
 To investigate potential biological functions associated with high and low non-silent mutation, we investigated within each dataset (high and low rates) the distribution of the different COG functional categories. More specifically, we calculated for each COG category the percentage of CDS it was found to be associated with.  
 
 ```{r}
-   # Create a function that sorts the seen COG categories and how many times each category is annotated in the set of contig - The function also calculates the percentage of cds of the set, a given category is associated with
+   # Create a function that sorts the seen COG categories and how many times each category is annotated in the set of contig - The function also calculates the percentage of CDS of the set, a given category is associated with
 
 egg_cat_inv=function(df_egg_rate) {
   df_egg_rate[is.na(df_egg_rate)]<-"-"

@@ -41,7 +41,7 @@ conda env export --from-history --no-builds > envs/dev.yml
 
 TODO: Add details about the description of input / output data and links to Zenodo depositions, if applicable.
 
-If you want to reproduce this work or access the data, please download the corresponding folder from Zenodo (ADD LINK). The paths mentioned in this ReadMe refer to the organization of the Zenodo folder, which is mirrored in this GitHub repository as well, and we have included relevant data here when their size permits.
+If you want to reproduce this work or access the data, please download the corresponding folder from Zenodo (ADD LINK). The paths mentioned in this ReadMe refer to the organization of the Zenodo folder, which is mirrored in this GitHub repository but only includes data with sizes compatible with GitHub capacities.
 
 ## Overview
 
@@ -79,21 +79,20 @@ We ran the following command line:
 `roary -e --mafft -f dataset_generation/results/pangenome_cds -i 90 Gff_files/*.gff -p 8`  
 where Gff_files is the location of all the previously generated Prokka Gff files.
 The two main outputs of Roary used in this work are dataset_generation/results/pangenome_cds/gene_presence_absence.csv, providing the presence-absence information in the different ECOR strains for all the identified genes (or contig) identified in the pangenome, and dataset_generation/results/pangenome_cds/cds_sequences.fa a multi-sequence fasta file containing all sequences of the coding sequences pangenome ; We also share the summary file dataset_generation/results/pangenome_cds/summary_statistics.txt
-The rest of the output is available on Zenodo: ADD LINK
 
 We further utilized Piggy (https://doi.org/10.1093/gigascience/giy015) to generate the pangenome of IGRs. We installed Piggy following the directions provided on the GitHub repository: https://github.com/harry-thorpe/piggy (`git clone https://github.com/harry-thorpe/piggy.git` - Commit Hash 68079ae1c310865d9d3a54221f8f3b3993329081). 
 Running Piggy relies on the previous Roary run to create the pangenome of IGRs. Make sure to include all the Roary outputs (available on Zenodo) and not only the 3 files provided in this repository
 Then, we ran the following command line to obtain Piggy output 
 `piggy/bin/piggy --in_dir Gff_files --out_dir dataset_generation/results/pangenome_igr --roary_dir dataset_generation/results/pangenome_cds -t 5`
-Again, only the two main outputs of Piggy used in this project are shared on this reposistory: dataset_generation/results/pangenome_igr/IGR_presence_absence.csv and dataset_generation/results/pangenome_igr/pangenome_igr.fasta 
-The rest of the output is available on Zenodo: 
-### TODO: ADD ZENODO link
 
-Finally, we concatenated the fasta outputs of Roary and Piggy to generate the whole pangenome, including both coding sequences and IGRs (dataset_generation/results/pangenome_whole/whole_pangenome.fasta)
+
+Finally, we concatenated the fasta outputs of Roary and Piggy to generate the whole pangenome, including both coding sequences (CDS) and IGRs (dataset_generation/results/pangenome_whole/whole_pangenome.fasta)
 `cat dataset_generation/results/pangenome_cds/cds_sequences.fa dataset_generation/results/pangenome_igr/pangenome_igr.fasta > dataset_generation/results/pangenome_whole/whole_pangenome.fasta`
 
 Eventually, we indexed the pangenome using `bwa index`
 `bwa index dataset_generation/results/pangenome_whole/whole_pangenome.fasta`
+
+The pangenome file is a multi sequences fasta file, regrouping all individual 32,441 sequences. We further refer to these sequences as 'contigs'. Also, each contig is characterized by a name corresponding to its annotation in its original genome from the ECOR72 collection.
 
 ##### Download of sequencing reads from SRA
 
@@ -201,9 +200,9 @@ First, we downloaded and installed SnpEff
 
 `unzip snpEff_latest_core.zip`
 
-** Annotating pangenome’s CDS sequences with Prokka **
+** Annotating pangenome’s coding sequences (CDS) with Prokka **
 
-To run SnpEff on our data, we first needed to create a custom database form the pangenome. To generate this databse, we needed a GFF file describing the genes or CDS in the pangenome. Thus, we used Prokka to annotate these CDS sequences (or genes), running:
+To run SnpEff on our data, we first needed to create a custom database form the pangenome. To generate this databse, we needed a GFF file describing the genes (or coding sequences - CDS) in the pangenome. Thus, we used Prokka to annotate these CDS (or genes), running:
 
 `prokka --force --outdir data_generation/data/pangenome_cds  --prefix genes data_generation/data/pangenome_cds/pangenome_cds.fa`
 
@@ -240,7 +239,7 @@ The following sections introduce the R notebooks that have been used to analyze 
 
 ##### Dataset characterization and phenotype distribution analysis
 We generated the R Notebook `data_analysis/scripts/Dataset_metainfo_AMR_analysis.md` to explore the cohort studied in our work.
-We first aimed to characterize different information in our *E. coli* cohort. This includes: strain genome size, number of CDS, year of isolation, country of isolation and host. Additionally, to gain insight into the prevalence and patterns of AMR phenotypes within the cohort, we examined the distribution of AMR phenotypes. This includes calculating the number of known AMR phenotypes per strain, the distribution of AMR phenotypes among the 21 antibiotics for which AMR data was available for more than 500 strains, and examining the presence of multi-drug resistant strains.
+We first aimed to characterize different information in our *E. coli* cohort. This includes: strain genome size, number of coding sequences (CDS), year of isolation, country of isolation and host. Additionally, to gain insight into the prevalence and patterns of AMR phenotypes within the cohort, we examined the distribution of AMR phenotypes. This includes calculating the number of known AMR phenotypes per strain, the distribution of AMR phenotypes among the 21 antibiotics for which AMR data was available for more than 500 strains, and examining the presence of multi-drug resistant strains.
 
 ##### Variants distribution analysis
 Next, we characterized the variant population with the R notebook `data_analysis/scripts/Variant_population_analysis.md`.

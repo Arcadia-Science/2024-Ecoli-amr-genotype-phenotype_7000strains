@@ -1,8 +1,7 @@
 ### Objective
 
-This R notebook contains the code used to analyse: - some meta
-information associated with the different strains used in this study
-(all strains but the ECOR72) - the antimicrobial resistance (AMR)
+This R notebook contains the code used to analyze: - iverse meta information associated with the different strains used in this study (all strains but the ECOR72), these metadata include data associated with sample information (isolation country, year, host...), sequencing information (NGS technology, accession numbers, quality, etc ...)
+along with genetic information such as number of bp, number of coding sequences, etc... - the antimicrobial resistance (AMR)
 phenotypes in the dataset
 
 ------------------------------------------------------------------------
@@ -239,7 +238,8 @@ antibiotics (columns) NAs indicate that no AMR information available
 
       # Preparing phenotype matrix
 
-    amr_data_matrix=amr_data_filtered%>%spread(Antibiotic, Resistant.Phenotype)
+    amr_data_matrix=amr_data_filtered%>%
+      spread(Antibiotic, Resistant.Phenotype)
 
     #write.csv(amr_data_matrix,"dataset_analysis/results/phenotype_matrix_08302024.csv")
 
