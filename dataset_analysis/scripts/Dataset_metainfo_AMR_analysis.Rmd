@@ -1,0 +1,343 @@
+---
+title: "Dataset and AMR phenotype characterization"
+output:
+  md_document: default
+---
+
+### Objective 
+
+This R notebook contains the code used to analyze:
+  - diverse meta information associated with the different strains used in this study (all strains but the ECOR72), these metadata include data associated with sample information (isolation country, year, host...), sequencing information (NGS technology, accession numbers, quality, etc ...)
+    along with genetic information such as number of bp, number of coding sequences, etc...
+  - the antimicrobial resistance (AMR) phenotypes in the dataset
+
+---
+
+```{r}
+library(tidyverse)
+library(ggwordcloud)
+library(arcadiathemeR)
+library(maps)
+
+```
+
+--- 
+
+# Meta-information analysis of the cohort
+
+## Data import
+
+```{r}
+ ## Samples list for which we obtained genome sequencing files from SRA accession number
+sample_list=read.csv('dataset_generation/data/sample_list_SRA.csv')
+
+ ## Genome information from BVBRC
+genome_data=read.csv('dataset_analysis/data/dataset_analysis/BVBRC_genome_May31.csv')
+
+```
+
+## Selection of the strains used in this study
+
+```{r}
+
+# 1- Extracting the Genome Names in the BV-BRC dataset associated with the SRA accession number we used to obtain the sequencing files
+
+samples=c(unique(sample_list$samples))
+genome_samples=subset(genome_data, genome_data$SRA.Accession%in%samples)
+
+   ## Some Genome Names are associated with multiple SRA accession number and we need to treat them separately 
+
+out=setdiff(samples, genome_samples$SRA.Accession)
+pattern <- paste(out, collapse="|")
+matching_rows <- grep(pattern, genome_data$SRA.Accession)
+subset_df <- genome_data[matching_rows, ]
+
+   ## And combine them 
+
+genome_samples=rbind(genome_samples,subset_df) # dataframe with all meta-information of the strains used in this study (excluding the ECOR72 strains)
+
+```
+
+## Selection of metadata of interest
+
+The metadata we want to investigate are:
+  - genome size (number of bp)
+  - number of CDS
+  - collection year
+  - isolation country
+  - host
+  
+```{r}
+
+metadata=genome_samples %>%
+  select(Genome.Name, Size, CDS, Collection.Year, Isolation.Country, Host.Name)
+
+empty_counts <- colSums(metadata == "")
+
+empty_counts # indicates for each metadata type the number of strains for which the information is missing
+
+```
+### Genome size
+
+```{r}
+min_size=min(metadata$Size)
+max_size=max(metadata$Size)
+mean_size=mean(metadata$Size)
+median_size=median(metadata$Size)
+
+size_plot <- ggplot(metadata, aes(x = Size)) +
+  geom_histogram(binwidth = 50000, fill='#7A77AB',col='#484B50') +
+  xlim(4000000, 6000000)+
+  theme_arcadia(x_axis_type = "numerical") +
+  xlab('Genome size (bp)')+
+  ylab('Number of strains')
+
+min_size
+max_size
+mean_size
+median_size
+
+size_plot
+
+```
+### CDS number
+```{r}
+
+min_cds=min(metadata$CDS)
+max_cds=max(metadata$CDS)
+mean_cds=mean(metadata$CDS)
+
+min_cds
+max_cds
+mean_cds
+
+```
+
+### Collection year
+```{r}
+year_counts <- table(metadata$Collection.Year)
+year_counts
+
+```
+
+### Host
+```{r}
+hosts_counts <- as.data.frame(table(metadata$Host.Name))
+hosts_counts
+
+```
+
+### Country
+```{r}
+country_counts <- as.data.frame(table(metadata$Isolation.Country))
+colnames(country_counts)=c('country','count')
+
+#Reformatting the data to use them with the map package and represent the data on a world map. This includes removing the strains without country information and consolidating strains from the United Kingdom and England into a single count.
+
+country_for_map=country_counts[-1,]
+country_for_map <- data.frame(
+  country = c("United Kingdom", setdiff(country_for_map$country, c("England", "United Kingdom"))),
+  count = c(sum(country_for_map$count[country_for_map$country %in% c("England", "United Kingdom")]), 
+            country_for_map$count[!country_for_map$country %in% c("England", "United Kingdom")])
+)
+
+# Changing United Kingdom to UK to match the country name in the map package
+country_for_map$country <- gsub("United Kingdom", "UK", country_for_map$country)
+
+# Mapping the data onto a world map
+## Generating the data
+world_map <- map_data("world")
+merged_data <- merge(world_map, country_for_map, by.x = "region", by.y = "country", all.x = TRUE)
+
+# Plot the world map with ggplot2
+ggplot() +
+  geom_map(data = merged_data, map = world_map,
+           aes(x = long, y = lat, map_id = region, fill = count),
+           color = "white", size = 0.1) +
+ scale_fill_gradient(low = "#282A49", high = "#97CD78", name = "Value") +
+  theme_arcadia() 
+
+
+
+```
+
+---
+
+# AMR phenotype analysis
+
+In this part we investigate the AMR information available for the strains studied in the Pub.
+
+## Data import
+
+```{r}
+amr_data=read.csv('dataset_analysis/data/dataset_analysis/BVBRC_genome_amr_May31.csv')
+
+# Extracting antibiotic info for the strains using their genomes names
+amr_data_sub=subset(amr_data, amr_data$Genome.Name%in%genome_samples$Genome.Name)
+
+#Correspondence antibiotic - antibiotic class
+antibiotic_class=read.csv('dataset_analysis/data/dataset_analysis/Antibiotic_class.csv')
+
+```
+
+## Reformatting the data, removing inconsistent information
+For some strains, multiple AMR phenotypes were reported for the same antibiotic, when these AMR phenotypes are inconsistent we remove them.
+
+```{r}
+     
+# Keeping consistent repetitive AMR phenotype but keeping only a single row entry
+
+amr_data_sub_short=amr_data_sub%>% select(Genome.Name, Antibiotic, Resistant.Phenotype)%>%
+  filter(Resistant.Phenotype != "")  %>% distinct()
+
+# Removing any inconsistent AMR phenotype for the same strain and antibiotic
+
+amr_data_filtered <- amr_data_sub_short %>%
+  group_by(Genome.Name, Antibiotic) %>%
+  filter(n_distinct(Resistant.Phenotype) == 1) %>%
+  ungroup()
+
+```
+
+## Generating the phenotype matrix
+The phenotype matrix provides AMR information for all strains (rows) and antibiotics (columns)
+NAs indicate that no AMR information available
+
+```{r}
+  # Preparing phenotype matrix
+
+amr_data_matrix=amr_data_filtered%>%
+  spread(Antibiotic, Resistant.Phenotype)
+
+#write.csv(amr_data_matrix,"dataset_analysis/results/phenotype_matrix_08302024.csv")
+
+```
+
+## Data exploration
+In this part, we explore and visualize different information related to AMR phenotypes
+
+### Number of Antibiotics or Combinations of antibiotics
+```{r}
+antibiotics=c(unique(amr_data_filtered$Antibiotic)) # 50 antibiotics with at least 1 known phenotype
+length(antibiotics)
+```
+
+## Number of known AMR phenotypes per strain
+
+```{r}
+# For each strains counts how many AMR phenotypes are available
+count_sample=amr_data_filtered%>%group_by(Genome.Name)%>%
+  summarize(count=n())
+
+head(count_sample,5)
+
+# Visualization of the distribution of known AMR phenotype per strain
+amrphen_per_strain=ggplot(count_sample, aes(x=count))+
+  geom_histogram(bins=max(count_sample$count), fill='#97CD78', col='#484B50') + 
+  xlab('# of knwon AMR phenotypes in a strain') +
+  ylab ('# of strains in the cohort')+
+  theme_arcadia(x_axis_type = "numerical")
+
+amrphen_per_strain
+
+```
+
+## Number of strains with known AMR phenotype per antibiotic
+
+```{r}
+# For each antibiotic we look at how many strains have available AMR phenotype information
+count_antibio=amr_data_filtered%>%group_by(Antibiotic)%>%
+  summarize(count=n())
+
+head(count_antibio,10)
+
+amrphen_per_antibiotic=ggplot(count_antibio, aes(x=count))+
+  geom_histogram(binwidth =100, fill='#C85152', col='#484B50') + 
+  xlab('# of knwown AMR phenotypes') +
+  ylab ('# of antibiotics')+
+  theme_arcadia(x_axis_type = "numerical")
+
+amrphen_per_antibiotic
+
+
+```
+
+## Antibiotics with 500 or more AMR phenotypes available: analysis of AMR distribution
+```{r}
+# Selecting antibiotics with more than 500 AMR phenotypes 
+list_antibio_high <- count_antibio %>%
+  filter(count >= 500) %>%
+  pull(Antibiotic) %>%
+  unique()
+
+df_antibio_high=subset(amr_data_filtered, amr_data_filtered$Antibiotic%in%list_antibio_high)
+
+# For each antibiotic counts how many 'Resistant, 'Susceptible' and 'Intermediary' phenotype
+phenotypes_counts <- df_antibio_high %>%
+  group_by(Antibiotic, Resistant.Phenotype) %>%
+  summarise(Count = n(), .groups = 'drop')
+
+phen_distribution=ggplot(phenotypes_counts, aes(x=Antibiotic, y=Count, fill=Resistant.Phenotype))+
+  geom_bar(stat='identity') + 
+  xlab('Antibiotic') + ylab('# of strain')+
+  theme_arcadia(x_axis_type = "categorical") +
+  scale_fill_arcadia(palette_name = "secondary", reverse = TRUE)+
+  theme(axis.text.x = element_text(angle=90,hjust=1))
+
+phen_distribution
+```
+
+## Resistant strains
+
+```{r}
+
+Resistant=subset(amr_data_filtered, amr_data_filtered$Resistant.Phenotype=='Resistant')
+
+list_antibio_resist=c(unique(Resistant$Antibiotic))
+
+#Number of resistant AMR per strain
+
+res_count=Resistant%>%group_by(Genome.Name)%>%
+  summarize(count=n())
+
+head(res_count)
+
+#Resistance per antibiotic class
+
+res_class=Resistant %>% left_join(antibiotic_class, by="Antibiotic")%>%
+  group_by(Class)%>%
+  summarize(count=n())
+
+res_per_class=ggplot(res_class, aes(label=Class,size=count, color=Class))+
+  geom_text_wordcloud() +
+  scale_size_area(max_size = 10)+
+  theme_arcadia() +
+  scale_color_arcadia(palette_name = "primary")
+
+res_per_class
+
+```
+
+## Multi-drug resistant strains
+Here we define Multi-drug resistant bacteria if they are resistant to 3 or more different class of antibiotic
+
+```{r}
+
+MDR_candidate=res_count %>%
+  filter(count >= 3) %>%
+  pull(Genome.Name) %>%
+  unique()
+
+MDR_candidate_DF=subset(Resistant, Resistant$Genome.Name%in%MDR_candidate)
+MDR_candidate_DF=left_join(MDR_candidate_DF, antibiotic_class, by="Antibiotic")
+
+strains=c(unique(MDR_candidate_DF$Genome.Name))
+
+length(strains)
+
+```
+
+
+```{r}
+sessionInfo()
+```

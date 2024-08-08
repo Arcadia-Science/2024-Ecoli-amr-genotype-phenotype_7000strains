@@ -1,0 +1,272 @@
+---
+title: "R Notebook"
+output: md_document
+---
+
+# Objectives
+
+In this notebook, we focus on genes that have previously been shown to be associated with antimicrobial resistance (AMR), and we evaluate the variants identified within these genes in our cohort.
+We focus on five genes known to confer resistance:
+-tetA_1 (contig: LMHPMMMF_04732), tetA_1 (contig: APHKLHJA_00520), and tet_3(contig: FCDKFLAE_04147) associated with tetracycline resistance
+-drfD (NGHFEPFE_01999) associated with trimethoprim resistance
+-catA1 (DHJNCGMO_04398) associated with chloramphenicol resistance
+
+
+After identifying the variants within each genes and their different genotypes in the strains, we correlate that information with the AMR phenotype for the right antibiotic in the corresponding strains, when AMR phenotype information was available.
+
+---
+
+
+# Environment setup
+
+```{r}
+rm(list=ls())
+
+library(tidyverse)
+library(VariantAnnotation)
+library(ComplexHeatmap)
+```
+
+---
+
+# Importing and formatting the data necessary for the analysis
+
+## Importing the variant genotype matrix
+
+In this section, we import the variant calling format (VCF) file containing variant information and associated genotypes for the five genes we decided to investigate.
+
+```{r}
+# Importing the vcf file 
+
+vcf_file_ab=readVcf('dataset_analysis/data/antimicrobial_resistance_analysis/resistance_output.non_silent.vcf.gz', genome="ecoli")
+geno_matrix_ab <- as.data.frame(geno(vcf_file_ab)$GT) # turn the vcf into a matrix with variants as rows and strains as column and genotype as information (1, means that the strain possess the alternative allele , '.' means that there is no called genotype. Note a '.' genotype does not necessarily means that the strain posses the ancestral allele, it could also mean that this strain does not posess that gene)
+
+
+# Formating the data for downstream process
+ 
+  ## Keeping only strains were there is a called variants (=strains with known alternative allele)
+ab_data <- geno_matrix_ab %>%
+  dplyr::select(where(~ !all(. == '.')))
+
+ ## Adding the contig name as the row.name
+ab_data$LOC=rownames(ab_data)
+
+ ## Adding a column with row.name and formatting to add contigs and pos information 
+ab_data <- ab_data %>%
+  dplyr::select(last_col(), everything())
+ab_data <- separate(ab_data, LOC, into = c("contigs", "PosB"), sep = ":") 
+ab_data <-  separate(ab_data, PosB, into = c("pos", "allele"), sep = "_")
+ab_data$pos=as.character(ab_data$pos)
+
+head(ab_data[,1:10],10)
+```
+## Importing AMR contig variants general information
+
+Next, for each variant, we add information regarding 
+  - the number of alleles
+  - the number of strains with the alternative allele
+  - the generic name of the AMR gene (catA1, tetA_3, etc...)
+  - the antibiotic the variant is expected to confer resistance to
+  
+``` {r}
+
+# Importing information
+
+res_freq=read.csv('dataset_analysis/data/antimicrobial_resistance_analysis/antibiotic_resistance_freq.csv') # file with all required information
+res_freq$pos=as.character(res_freq$pos)
+colnames(res_freq)=c('contigs','pos','n_alleles','n_strains','Type','Resistance_gene','Antibiotic')
+
+# Adding information to the variant genotype matrix
+ab_data=left_join(ab_data, res_freq, by=c('contigs','pos'))
+
+ab_data <- ab_data %>%
+  filter(!is.na(Resistance_gene))
+
+## Reformatting data to obtain by strain information 
+
+ab_data_rfmt=ab_data %>% gather(Strain,Called,ERR1197946:SRR850839)
+ab_data_rfmt=subset(ab_data_rfmt, ab_data_rfmt$Called!='.') #only keep entries when a alternative allele was called
+
+head(ab_data_rfmt,10)
+
+```
+
+## Importing the phenotype matrix
+
+Next we use the original phenotype matrix, to extract AMR information for strains that have been identified with variants in the 5 contigs of interest
+
+In addition, we import a file that gives the correspondence between the strain genome identification numbers and the strain genome SRA accession numbers to be able to connect information from the phenotype matrix and the genotype matrix.
+``` {r}
+
+#Importing AMR phenotype map
+amr_phen=read.csv("dataset_analysis/results/phenotype_matrix_08302024.csv")[,-1]
+
+#Importing correspondence SRA and genome name
+SRA_to_genome=read.csv('dataset_analysis/data/antimicrobial_resistance_analysis/SRA_to_genome_name.csv')[,-1]
+
+ ##Changing Genome name to SRA accession in AMR phenotype matrix
+
+amr_phen_sra=left_join(SRA_to_genome, amr_phen, by="Genome.Name")
+
+ ##Extracting AMR phenotypes for species with variants in AMR known genes
+
+amr_phen_geneamr=subset(amr_phen_sra, amr_phen_sra$SRA.Accession%in%ab_data_rfmt$Strain)
+
+
+```
+
+---
+
+# Phenotypes correlation
+
+The goal of the next section is to evaluate the correlation between AMR phenotype for an antibiotic and the presence/absence of genetic variant in associated resistance genes. 
+Here, we focus on three antibiotics: chloramphenicol, trimethoprim and tetracycline. For each antibiotic, we have identified genetic variants and associated strains. When the AMR phenotype is available for these strain-antibiotic combinations, we can evaluate whether these variations are associated with antimicrobial resistance.
+To do so, we use an hypergeometric test to evaluate if the Resistant phenotype is significantly enriched within strains with variant in the AMR genes and available phenotype.
+
+## Chloramphenicol
+``` {r}
+# Sub-setting variants within chloramphenicol resistance gene (catA1)
+chlor_var=subset(ab_data_rfmt, ab_data_rfmt$Antibiotic=='Chloramphenicol')
+
+
+# Selection of the strains with available Chloramphenicol AMR phenotypes
+
+chlor_amr_all=amr_phen_sra %>% dplyr::select(Genome.Name,SRA.Accession, chloramphenicol) %>%
+  na.omit()
+
+chlor_amr_res=subset(chlor_amr_all, chlor_amr_all$chloramphenicol=='Resistant')
+
+# Subset the phenotype information for the strains that have been identified with variant within the chloramphenicol resistance gene 
+chlor_amr=subset(chlor_amr_all, chlor_amr_all$SRA.Accession%in%chlor_var$Strain) 
+
+chlor_amr
+
+# Testing if the set of variants with documented AMR phenotype is enriched in Resistant phenotypes
+
+N=dim(chlor_amr_all)[1] #number of strains with known AMR for Chloramphenicol
+K=dim(chlor_amr_res)[1] #number of strains with known AMR for chloramphenicol and that are associated with a Resistant phenotype
+n=dim(chlor_amr)[1] #number of strains with known AMR for chloramphenicol and that have a variant in catA1
+k=dim(subset(chlor_amr,chlor_amr$chloramphenicol=='Resistant'))[1] #number of strains with known AMR and variant in catA1 and associated with Resistant phenotype
+
+p_value <- dhyper(k, K, N - K, n)
+
+p_value
+
+
+```
+
+## Trimethoprim
+``` {r}
+# Sub-setting variants within the Trimethoprim resistance gene drfD
+
+trim_var=subset(ab_data_rfmt, ab_data_rfmt$Antibiotic=='Trimethoprim') 
+
+
+# Selection of strains with known Trimethoprim AMR phenotypes
+trim_amr_all=amr_phen_sra %>% dplyr::select(Genome.Name,SRA.Accession, trimethoprim) %>%
+  na.omit()
+
+trim_amr_res=subset(trim_amr_all, trim_amr_all$trimethoprim=='Resistant')
+
+# Subset the phenotype information for the strains that have been identified with variant within the trimethoprim resistance gene
+trim_amr=subset(trim_amr_all, trim_amr_all$SRA.Accession%in%trim_var$Strain)
+
+trim_amr
+
+# Testing if the set of variants with documented AMR phenotype is enriched in Resistant phenotypes
+
+N=dim(trim_amr_all)[1] #number of strains with known AMR for trimethoprim
+K=dim(trim_amr_res)[1] #number of strains with known AMR for trimethoprim and that are associated with a Resistant phenotype
+n=dim(trim_amr)[1] #number of strains with known AMR for trimethoprim and that have a variant in catA1
+k=dim(subset(trim_amr,trim_amr$trimethoprim=='Resistant'))[1] #number of strains with known AMR and variant in catA1 and associated with Resistant phenotype
+
+p_value <- dhyper(k, K, N - K, n)
+
+p_value
+
+```
+
+Because the 40 strains for which we have variant and phenotype information are split between Susceptible and Resistant phenotypes, we investigated if specific positions within *dfrD* are associated with Resistance
+```{r}
+trim_amr_phen=na.omit(trim_amr)
+trim_var_phen=subset(trim_var, trim_var$Strain%in%trim_amr_phen$SRA.Accession)
+trim_var_phen= trim_var_phen %>% dplyr::select(pos, Strain, Called) %>%
+  spread(Strain, Called)
+
+trim_var_phen$pos=as.numeric(trim_var_phen$pos)
+
+df_hm=data.frame(pos=trim_var_phen$pos)
+
+ERR=c(colnames(trim_var_phen[,-1]))
+phen_loc=colnames(trim_var_phen)
+
+# Using a for loop, we prepare the matrix that identifies for each strain that has a variant in the *dfrD* contig, the location of the variant within the contig and the strain AMR phenotype to Trimethorpim 
+for (i in 1:length(ERR)){
+  ERR_tmp=ERR[i]
+  phen=subset(trim_amr_phen, trim_amr_phen$SRA.Accession==ERR_tmp)
+  phen=phen[,3]
+  
+  vec_name=c(trim_var_phen$pos)
+  loc=which(phen_loc==ERR_tmp)
+  vec_var=trim_var_phen[,loc]
+  names(vec_var)= vec_name
+  vec_var[vec_var == 1] <- phen
+  
+  df_tmp=data.frame('Sample'=vec_var)
+  rownames(df_tmp)=vec_name
+  colnames(df_tmp)=ERR_tmp
+  
+  df_hm=cbind(df_hm,df_tmp)
+  
+}
+
+df_hm <- df_hm[order(df_hm$pos), ]
+mat=as.matrix(t(df_hm[,-1]))
+mat[is.na(mat)] <- "NA"
+
+colors <- c("Susceptible" = "#7A77AB", "Resistant" = "#F7B846", "No_phenotype_available"="#EDE6DA")
+names(colors) <- c("Susceptible", "Resistant", "NA")
+
+Heatmap(mat, col = colors, name = "Categories",rect_gp = gpar(col = "white", lwd = 1),
+        row_names_gp = gpar(fontsize = 7)) 
+
+```
+
+
+# Tetracycline
+
+``` {r}
+# Sub-setting variants within Trimethoprim resistance genes (tet genes)
+tetra_var=subset(ab_data_rfmt, ab_data_rfmt$Antibiotic=='Tetracycline')
+
+# Selection of strains with known Tetracycline AMR phenotypes
+tetra_amr_all=amr_phen_sra %>% dplyr::select(Genome.Name,SRA.Accession, tetracycline)%>%
+  na.omit()
+
+tetra_amr_res=subset(tetra_amr_all, tetra_amr_all$tetracycline=='Resistant')
+
+# Subset the phenotype information for the strains that have been identified with variant within the tetracycline resistance genes
+
+tetra_amr=subset(tetra_amr_all, tetra_amr_all$SRA.Accession%in%tetra_var$Strain)
+
+tetra_amr
+
+# Testing if the set of variants with documented AMR phenotype is enriched in Resistant phenotypes
+
+N=dim(tetra_amr_all)[1] #number of strains with known AMR for tetracycline
+K=dim(tetra_amr_res)[1] #number of strains with known AMR for tetracycline and that are associated with a Resistant phenotype
+n=dim(tetra_amr)[1] #number of strains with known AMR for tetracycline and that have a variant in catA1
+k=dim(subset(tetra_amr,tetra_amr$tetracycline=='Resistant'))[1] #number of strains with known AMR and variant in catA1 and associated with Resistant phenotype
+
+p_value <- dhyper(k, K, N - K, n)
+p_value
+
+
+```
+
+---
+
+``` {r}
+sessionInfo()
+
+```
