@@ -153,13 +153,14 @@ To eventually merge everything we ran the following commands in the command line
 
 To ensure the accuracy and relevance of genetic data, it's essential to filter variants and minimize false positives. This involves removing low-quality variants by applying specific thresholds for read depth and quality scores, for instance. In this study, we aimed to implement reasonable filtering criteria that control for false positives without being overly stringent, thus avoiding excluding too many true positives. We applied two filters: QUAL and DP. The QUAL filter corresponds to the quality score of the variant calling process, reflecting confidence in the detected variant at a given position. We set the QUAL threshold at 30, representing a 99.9% probability that the variant is correctly identified, thereby filtering out any variant calls with a lower score. The DP filter represents the total read depth at the variant's position, reflecting the volume of data supporting the variant. 
 
-** Determining the DP threshold **
+**Determining the DP threshold**
 
 We established this threshold based on the coverage data from the 72 ECOR strains used to generate the pangenome and our understanding of the presence or absence of each contig of the pangenome in these strains.
 
 We defined the DP threshold as the minimum number of reads required to confidently assert the presence of a nucleotide (and, by extension, the contig) in a strain. To calculate this threshold, we analyzed the presence-absence data for the 72 ECOR strains, incorporating the coverage depth observed for each nucleotide that mapped against the pangenome.
 
 *1-Extracting DP information at each nucleotide*
+
 First we needed to extract the Locus, Position, and depth information for each nucleotide from the mpileup files of each strains. 
 To do so, we wrote a custom Python script `data_generation/scripts/extract_mpileup_info.py` that obtains this information for individual strains, and used it within a snakefile (`data_generation/scripts/sequencing_depth_info_extraction`) to process individual mpileups in parallel. 
 Briefly, this Python script opens a mpileup file into a panda dataframe (skipping all the comments lines at the beginning of the mpileup), turns the DP values into numerics, and then extracts only the columns for CHROM (which corresponds to the contig name), POS (which corresponds to the position of the nucleotide in CHROM) and DP (which corresponds to the sequencing depth for this nucleotide). Finally, this is saved into a tab delimited file.
@@ -177,10 +178,11 @@ Then, using the custom  Python script `data_generation/scripts/numpy_merge_ecor.
 We further used the custom R notebook `data_generation/scripts/Ecor72_averaging_contigDP.ipynb` to calculate the average read depth per contig for each strain as the sum of reads per nucleotide for a contig divided by the contig length.  
 
 *3-Calulating the contig-level DP threshold associated with the presence/absence of a contig*
+
 Finally, in the R notebook `data_generation/scripts/ECOR72_and_DP_threshold_analysis.Rmd` we assessed contig read depth patterns in relation to the contigs's presence-absence status by integrating read depth and presence-absence data for each contig across all 72 ECOR strains. 
 Based on the results we chose a DP threshold of 19.28 that indicates that any nucleotide or contig with a read depth exceeding 19.28 is confidently considered present.
 
-** Filtering **
+**Filtering**
 
 We filtered the variants using the chosen DP and QUAL thresholds and generated and indexed the VCF file with filtered variants (`data_generation/results/vcf/filtered_output.vcf.gz`)
 
@@ -194,13 +196,14 @@ and indexed the VCF file
 
 We used SnpEff (https://doi.org/10.4161/fly.19695) to annotate variants within the pangenome's coding sequences. SnpEff analyzes input variants from a VCF file by annotating them based on a predefined database that includes genes, gene annotations, and gene sequence information. 
 
-** Installing SnpEff **
+**Installing SnpEff**
+
 First, we downloaded and installed SnpEff
 `wget https://snpeff.blob.core.windows.net/versions/snpEff_latest_core.zip`
 
 `unzip snpEff_latest_core.zip`
 
-** Annotating pangenome’s coding sequences (CDS) with Prokka **
+**Annotating pangenome’s coding sequences (CDS) with Prokka**
 
 To run SnpEff on our data, we first needed to create a custom database form the pangenome. To generate this databse, we needed a GFF file describing the genes (or coding sequences - CDS) in the pangenome. Thus, we used Prokka to annotate these CDS (or genes), running:
 
@@ -208,7 +211,7 @@ To run SnpEff on our data, we first needed to create a custom database form the 
 
 This generated the gff file: `data_generation/results/pangenome_cds/genes.gff`
 
-** Creating the custom database for the pangenome **
+**Creating the custom database for the pangenome**
 
 We generated our custom database from our pangenome following the directions detailed on the SnpEff website and edited the snpEff.config accordingly.
 
@@ -219,13 +222,13 @@ To create the database, we ran:
 And we checked if the database was created by running:
 `java -jar snpEff.jar dump ecor72 | less`
 
-** Annotating the variants **
+**Annotating the variants**
 
 Once the database has been created, we annotated the filtered VCF file by running:
 
 ` nohup sh -c 'java -Xmx32g -jar snpEff.jar eff -s annot_summary_filtered.html data_generation/results/vcf/filtered_output.vcf.gz | bgzip > data_generation/results/vcf/annotated_output.vcf.gz ' > nohup.out 2>&1 &`
 
-** Filtering nonsilent variants **
+**Filtering nonsilent variants**
 
 We used SnpSift (https://doi.org/10.3389/fgene.2012.00035), a component of the SnpEff suite, to filter and refine annotated VCF files. We excluded silent mutations to retain only variants associated with missense, nonsense, and frameshift mutations, resulting in the curated file (`data_generation/results/vcf/output.non_silent.vcf.gz`).
 

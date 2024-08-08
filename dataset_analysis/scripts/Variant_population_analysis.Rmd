@@ -38,7 +38,7 @@ library(arcadiathemeR)
 # Investigation of the variant distribution
 
 We start by analyzing the distribution of identified variants in the whole cohort. 
-At this stage, no variant annotation has happened and there is no distinction between silent and non-silent variants. However, variants have been filtered based on their reliability using DP and QUAL filters (see Pub Approch section (https://doi.org/10.57844/arcadia-d2cf-ebe5) or Github repo ReadMe).
+At this stage, no variant annotation has happened and there is no distinction between silent and non-silent variants. However, variants have been filtered based on their reliability using DP and QUAL filters (see Pub [Approach section](https://doi.org/10.57844/arcadia-d2cf-ebe5) or Github repo [ReadMe - Approach](https://github.com/Arcadia-Science/2024-Ecoli-gene-network-prediction/blob/main/README.md#Approach)).
 
 ## Data import
 
