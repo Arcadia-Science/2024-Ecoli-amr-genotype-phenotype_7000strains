@@ -1,6 +1,6 @@
 ### Objective
 
-This R notebook contains the code used to analyze: - iverse meta information associated with the different strains used in this study (all strains but the ECOR72), these metadata include data associated with sample information (isolation country, year, host...), sequencing information (NGS technology, accession numbers, quality, etc ...)
+This R notebook contains the code used to analyze: - diverse meta information associated with the different strains used in this study (all strains but the ECOR72), these metadata include data associated with sample information (isolation country, year, host...), sequencing information (NGS technology, accession numbers, quality, etc ...)
 along with genetic information such as number of bp, number of coding sequences, etc... - the antimicrobial resistance (AMR)
 phenotypes in the dataset
 
@@ -85,10 +85,12 @@ number of CDS - collection year - isolation country - host
     median_size=median(metadata$Size)
 
     size_plot <- ggplot(metadata, aes(x = Size)) +
-      geom_histogram(binwidth = 50000, fill='#7A77AB',col='#484B50') +
-      xlim(4000000, 6000000)+
+      geom_histogram(binwidth = 50000, fill='#7A77AB',col='#484B50')+
+      scale_x_continuous(limits = c(4000000, 6000000),
+                         breaks = seq(4000000, 6000000, by = 500000),
+                         labels = function(x) round(x / 1000000, 1)) +
       theme_arcadia(x_axis_type = "numerical") +
-      xlab('Genome size (bp)')+
+      xlab('Genome size (million base pair)')+
       ylab('Number of strains')
 
     min_size
@@ -178,14 +180,25 @@ number of CDS - collection year - isolation country - host
     world_map <- map_data("world")
     merged_data <- merge(world_map, country_for_map, by.x = "region", by.y = "country", all.x = TRUE)
 
+     # Adding a column that categorizes the countries based on how many strains have been sampled there
+
+    merged_data <- merged_data %>%
+      mutate(cat = case_when(
+        count > 500 ~ "More than 500 strains",
+        count < 500 ~ "Less than 500 strains",
+        is.na(count) ~ NA_character_
+      ))
+
+
     # Plot the world map with ggplot2
     ggplot() +
       geom_map(data = merged_data, map = world_map,
-               aes(x = long, y = lat, map_id = region, fill = count),
+               aes(x = long, y = lat, map_id = region, fill = cat),
                color = "white", size = 0.1) +
-     scale_fill_gradient(low = "#282A49", high = "#97CD78", name = "Value") +
-      theme_arcadia() 
-
+      scale_fill_manual(values = c("More than 500 strains" = "#F28360", "Less than 500 strains" = "#5088C5", "NA" = "#EBEDE8"),
+                        na.value = "grey90", name = "Number of strains sampled from a country") +
+      theme_arcadia() +
+      theme(legend.position = "bottom")
     ## Warning: Using `size` aesthetic for lines was deprecated in ggplot2 3.4.0.
     ## ℹ Please use `linewidth` instead.
     ## This warning is displayed once every 8 hours.
@@ -275,8 +288,8 @@ AMR phenotypes
     # Visualization of the distribution of known AMR phenotype per strain
     amrphen_per_strain=ggplot(count_sample, aes(x=count))+
       geom_histogram(bins=max(count_sample$count), fill='#97CD78', col='#484B50') + 
-      xlab('# of knwon AMR phenotypes in a strain') +
-      ylab ('# of strains in the cohort')+
+      xlab('number of known AMR phenotypes in a strain') +
+      ylab ('number of strains in the cohort')+
       theme_arcadia(x_axis_type = "numerical")
 
     amrphen_per_strain
@@ -328,14 +341,27 @@ AMR phenotypes
     # For each antibiotic counts how many 'Resistant, 'Susceptible' and 'Intermediary' phenotype
     phenotypes_counts <- df_antibio_high %>%
       group_by(Antibiotic, Resistant.Phenotype) %>%
-      summarise(Count = n(), .groups = 'drop')
+      summarise(Count = n(), .groups = 'drop') %>%
+      left_join(antibiotic_class, by="Antibiotic")
 
-    phen_distribution=ggplot(phenotypes_counts, aes(x=Antibiotic, y=Count, fill=Resistant.Phenotype))+
+    phenotypes_counts_plot=phenotypes_counts%>%
+      dplyr::select(Antibiotic, Resistant.Phenotype, Count, Class)%>%
+      mutate(Antibiotic = factor(Antibiotic, levels = unique(Antibiotic[order(Class)])))
+
+    phenotypes_counts_plot$Resistant.Phenotype <- factor(phenotypes_counts_plot$Resistant.Phenotype, levels = c("Susceptible", "Intermediate","Resistant" ))
+
+
+    phen_distribution=ggplot(phenotypes_counts_plot, aes(x=Antibiotic, y=Count, fill=Resistant.Phenotype))+
       geom_bar(stat='identity') + 
-      xlab('Antibiotic') + ylab('# of strain')+
-      theme_arcadia(x_axis_type = "categorical") +
-      scale_fill_arcadia(palette_name = "secondary", reverse = TRUE)+
-      theme(axis.text.x = element_text(angle=90,hjust=1))
+      xlab('Antibiotic') + ylab('Number of strains') +
+      theme_arcadia(x_axis_type = 'categorical')+
+      scale_fill_arcadia(palette_name = "secondary", reverse = TRUE, name='AMR phenotype')+
+      theme(axis.text.x = element_text(angle=90,hjust=1))+
+     theme(
+        legend.position = "bottom",
+        legend.box = "vertical" ,
+        legend.margin = margin(t = 25))+
+      guides(fill = guide_legend(order = 1, title.position = "top",ncol = 1))
 
     phen_distribution
 
@@ -370,7 +396,7 @@ AMR phenotypes
       group_by(Class)%>%
       summarize(count=n())
 
-    res_per_class=ggplot(res_class, aes(label=Class,size=count, color=Class))+
+    res_per_class=ggplot(res_class, aes(label=Class,size=count))+
       geom_text_wordcloud() +
       scale_size_area(max_size = 10)+
       theme_arcadia() +

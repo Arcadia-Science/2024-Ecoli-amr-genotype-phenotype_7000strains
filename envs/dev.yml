@@ -14,7 +14,7 @@ dependencies:
   - samtools=1.20
   - r-base=4.3.3
   - picard 2.27.5
-  - parlell=20240322
+  - paralell=20240322
   - panda=2.2.2
   - numpy=1.26.4
   - bwa=0.7.18
