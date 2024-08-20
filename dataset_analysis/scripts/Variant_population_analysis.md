@@ -341,7 +341,8 @@ be deleterious and selected against.
     CDS_rate_comp$ratio=CDS_rate_comp$numb_var_ns/CDS_rate_comp$numb_var_all  
 
     dens_ratio=ggplot(CDS_rate_comp, aes(x=ratio))+
-      geom_density(fill='#BABEE0')+theme_arcadia(x_axis_type = 'numerical')+
+      geom_density(fill='#BABEE0')+
+      theme_arcadia(x_axis_type = 'numerical')+
       xlab('Non-silent variation ratio per contig') + ylab('Density')
 
     dens_ratio

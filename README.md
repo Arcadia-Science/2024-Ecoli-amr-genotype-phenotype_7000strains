@@ -55,6 +55,8 @@ The first step to generate our dataset involved mapping out all the genetic vari
 The codes and some data associated with this part are all shared in the **dataset_generation** folder of this repo. 
 To obtain the all input and output data and be able to recapitulate this analysis, please download the Zenodo repository: [10.5281/zenodo.12692732](10.5281/zenodo.12692732) 
 
+
+
 #### Generation of the reference genome
 
 The selection of a good reference genome is important for genotype-phenotype analysis and the precise identification and annotation of genetic variants in the cohort. The reference genome must provide comprehensive coverage and accurately represent the genetic diversity of the cohort (https://doi.org/10.1099/mgen.0.001021). 
@@ -87,6 +89,8 @@ Eventually, we indexed the pangenome using `bwa index`
 
 The pangenome file is a multi sequences fasta file, regrouping all individual 32,441 sequences. We further refer to these sequences as 'contigs'. Also, each contig is characterized by a name corresponding to its annotation in its original genome from the ECOR72 collection.
 
+
+
 #### Download of sequencing reads from SRA
 
 We obtained the SRA accession numbers for the sequencing files of the 7,055 selected strains (6,983 strains from the cohort and 72 strains from the ECOR collection).
@@ -96,9 +100,13 @@ We used the GNU Parallel shell tool and the fasterq-dump tool from the sra-toolk
 
 `parallel -j 64 fasterq-dump {} ::: $(cat sample_list_SRA.csv` 
 
+
+
 #### Variant Calling in 7,057 samples and merging of individual variant calling format (VCF) files
 
 Variant calling aims to identify the differences between a strain and a reference genome by aligning sequencing reads of the strains against the reference and identifying where they differ. Variant calling algorithms then assess these differences to determine the likely genetic variations versus sequencing errors. The confirmed variants are then recorded in a Variant Call Format (VCF) file that lists the position of each variant in the genome, the nature of the genetic change, and the quality of the call. 
+
+
 
 **Variant calling on individual strains**
 We performed variant calling independently on each strain againts the pangenome, and generated a VCF file for each of them.
@@ -120,6 +128,8 @@ https://doi.org/10.48550/arXiv.1303.3997) -> intermediary file saved
 	- variant calling on mpileup file using bcftools and generation of VCF file
 	- indexing VCF file
     -> output: VCF file  
+
+
 
 **Merging individual VCF.gz files**
 We merged all VCF files into a single VCF (`data_generation/results/vcf/merged_output_all.vcf.gz`). To do so, we first merged batches of 1,000 files using the `merge` function from bcftools. Each batch was then re-indexed before a final comprehensive merge was performed.
@@ -144,11 +154,13 @@ To eventually merge everything we ran the following commands in the command line
 
 To ensure the accuracy and relevance of genetic data, it's essential to filter variants and minimize false positives. This involves removing low-quality variants by applying specific thresholds for read depth and quality scores, for instance. In this study, we aimed to implement reasonable filtering criteria that control for false positives without being overly stringent, thus avoiding excluding too many true positives. We applied two filters: QUAL and DP. The QUAL filter corresponds to the quality score of the variant calling process, reflecting confidence in the detected variant at a given position. We set the QUAL threshold at 30, representing a 99.9% probability that the variant is correctly identified, thereby filtering out any variant calls with a lower score. The DP filter represents the total read depth at the variant's position, reflecting the volume of data supporting the variant. 
 
+
 **Determining the DP threshold**
 
 We established this threshold based on the coverage data from the 72 ECOR strains used to generate the pangenome and our understanding of the presence or absence of each contig of the pangenome in these strains.
 
 We defined the DP threshold as the minimum number of reads required to confidently assert the presence of a nucleotide (and, by extension, the contig) in a strain. To calculate this threshold, we analyzed the presence-absence data for the 72 ECOR strains, incorporating the coverage depth observed for each nucleotide that mapped against the pangenome.
+
 
 *1-Extracting DP information at each nucleotide*
 
@@ -160,7 +172,8 @@ We ran the snakefile using the following command line:
 
 `nohup snakemake -s sequencing_depth_info --cores 54 > extracting_DP.txt 2>&1 &`
 
-*2-Calulating average read depth per contig in ECOR strains*
+
+*2-Calculating average read depth per contig in ECOR strains*
 
 Then, using the custom  Python script `data_generation/scripts/numpy_merge_ecor.py`, we consolidated all the nucleotide-level DP information of the 72 ECOR strains into a single file `data_generation/results/ecor72_DP/ecor72_array.txt`.
 
@@ -168,10 +181,12 @@ Then, using the custom  Python script `data_generation/scripts/numpy_merge_ecor.
 
 We further used the custom R notebook `data_generation/scripts/Ecor72_averaging_contigDP.ipynb` to calculate the average read depth per contig for each strain as the sum of reads per nucleotide for a contig divided by the contig length.  
 
-*3-Calulating the contig-level DP threshold associated with the presence/absence of a contig*
+
+*3-Calculating the contig-level DP threshold associated with the presence/absence of a contig*
 
 Finally, in the R notebook `data_generation/scripts/ECOR72_and_DP_threshold_analysis.Rmd` we assessed contig read depth patterns in relation to the contigs's presence-absence status by integrating read depth and presence-absence data for each contig across all 72 ECOR strains. 
 Based on the results we chose a DP threshold of 19.28 that indicates that any nucleotide or contig with a read depth exceeding 19.28 is confidently considered present.
+
 
 **Filtering**
 
@@ -183,9 +198,13 @@ and indexed the VCF file
 
 `bcftools index data_generation/results/vcf/filtered_output.vcf.gz`
 
+
+
+
 #### Variant annotation
 
 We used SnpEff (https://doi.org/10.4161/fly.19695) to annotate variants within the pangenome's coding sequences. SnpEff analyzes input variants from a VCF file by annotating them based on a predefined database that includes genes, gene annotations, and gene sequence information. 
+
 
 **Installing SnpEff**
 
@@ -194,6 +213,7 @@ First, we downloaded and installed SnpEff
 
 `unzip snpEff_latest_core.zip`
 
+
 **Annotating pangenome’s coding sequences (CDS) with Prokka**
 
 To run SnpEff on our data, we first needed to create a custom database form the pangenome. To generate this databse, we needed a GFF file describing the genes (or coding sequences - CDS) in the pangenome. Thus, we used Prokka to annotate these CDS (or genes), running:
@@ -201,6 +221,7 @@ To run SnpEff on our data, we first needed to create a custom database form the 
 `prokka --force --outdir data_generation/data/pangenome_cds  --prefix genes data_generation/data/pangenome_cds/pangenome_cds.fa`
 
 This generated the gff file: `data_generation/results/pangenome_cds/genes.gff`
+
 
 **Creating the custom database for the pangenome**
 
@@ -213,11 +234,13 @@ To create the database, we ran:
 And we checked if the database was created by running:
 `java -jar snpEff.jar dump ecor72 | less`
 
+
 **Annotating the variants**
 
 Once the database has been created, we annotated the filtered VCF file by running:
 
 ` nohup sh -c 'java -Xmx32g -jar snpEff.jar eff -s annot_summary_filtered.html data_generation/results/vcf/filtered_output.vcf.gz | bgzip > data_generation/results/vcf/annotated_output.vcf.gz ' > nohup.out 2>&1 &`
+
 
 **Filtering nonsilent variants**
 
@@ -226,19 +249,31 @@ We used SnpSift (https://doi.org/10.3389/fgene.2012.00035), a component of the S
 We ran:
 `java -jar SnpSift.jar filter "(ANN[*].EFFECT has '\''missense_variant'\'' | ANN[*].EFFECT has '\''nonsense_variant'\'' | ANN[*].EFFECT has '\''frameshift_variant'\'')" data_generation/results/vcf/annotated_output.vcf.gz | bgzip > data_generation/results/vcf/output.non_silent.vcf.gz`
 
+
+
+
 ### 2- Data analysis
 The aim of this work is to generate a comprehensive dataset of *E. coli* strains genotypes and AMR phenotypes. While the previous steps have led to the generation of the genotype information within the cohort, the following steps focused on further exploring and characterizing the phenotype and genotype data. 
 First we explored general characteristics of the cohort (collection year, host, country of isolation, strain genome size) and distribution of the AMR phenotypes in the cohort, then we analyzed the variant population, and finally we investigated the correlation between variants within known antimicrobial resistance genes and the corresponding AMR phenotypes. 
 The following sections introduce the R notebooks that have been used to analyze the data. All notebooks are provided in both the .Rmd and regular .md format. The associated results are presented and discussed in the Pub: https://doi.org/10.57844/arcadia-d2cf-ebe5
 
+
+
+
 #### Dataset characterization and phenotype distribution analysis
 We generated the R Notebook `data_analysis/scripts/Dataset_metainfo_AMR_analysis.md` to explore the cohort studied in our work.
 We first aimed to characterize different information in our *E. coli* cohort. This includes: strain genome size, number of coding sequences (CDS), year of isolation, country of isolation and host. Additionally, to gain insight into the prevalence and patterns of AMR phenotypes within the cohort, we examined the distribution of AMR phenotypes. This includes calculating the number of known AMR phenotypes per strain, the distribution of AMR phenotypes among the 21 antibiotics for which AMR data was available for more than 500 strains, and examining the presence of multi-drug resistant strains.
+
+
+
 
 #### Variants distribution analysis
 Next, we characterized the variant population with the R notebook `data_analysis/scripts/Variant_population_analysis.md`.
 First, we explored variants within the cohort without distinguishing between silent and non-silent variants. We characterized how many variants were found in CDS contigs and how were found in intergenic regions (IGR), the variant rate per contig as well as the variant frequency.
 Then, we focused on variants annotated as non-silent. We explored the fraction of variation they represent within each contig, identified contigs associated with high non-silent variation rate and low non-silent variation mutation rates and performed functional analysis on these two groups.
+
+
+
 
 #### Antimicrobial resistance analysis
 Finally, we investigated non-silent variants within contigs known to be associated with the resistance to three antibiotics. 
@@ -256,6 +291,7 @@ We first extracted the genotype information for these contigs specifically and g
 `bcftools view -r LMHECDEF_03475,MFCAOJAD_04226,LMHPMMMF_04732,FCDKFLAE_04147,APHKLHJA_0052,NGHFEPFE_01999,DHJNCGMO_04398  data_generation/results/vcf/output.non_silent.vcf.gz -Oz -o data_analysis/data/resistance_output.non_silent.vcf.gz `
 
 Because sulfonamide and beta-lactam are a large class of antibiotics, we prefered to focus on specifically identified antibiotic, and we further focused on the variants associated with resistance to Chloramphenicol, Tetracycline and Trimethoprim. We used the R notebook `Antimicrobial_resistance_investigation.md` to investigate these variants and characterize their distribution in the cohort. Specifically, we aimed to analyzed, when available, the distribution of the antimicrobial resistance phenotypes for the strains that possess non-silent variants within these genes.
+
 
 
 ## Compute Specifications
