@@ -341,7 +341,9 @@ be deleterious and selected against.
     CDS_rate_comp$ratio=CDS_rate_comp$numb_var_ns/CDS_rate_comp$numb_var_all  
 
     dens_ratio=ggplot(CDS_rate_comp, aes(x=ratio))+
-      geom_density(fill='#BABEE0')+theme_arcadia(x_axis_type = 'numerical')
+      geom_density(fill='#BABEE0')+
+      theme_arcadia(x_axis_type = 'numerical')+
+      xlab('Non-silent variation ratio per contig') + ylab('Density')
 
     dens_ratio
 
@@ -355,7 +357,7 @@ functions are prone to modifications in the cohort.
 
 Here we defined ‘High’ non-silent mutation rate has the CDS for which
 non-silent variants represented 90% or more of the variants in a CDS.
-Conversly, we defined low non-silent mutation rate as the CDS for which
+Conversely, we defined low non-silent mutation rate as the CDS for which
 non-silent variants represented 10% or less of the variants of a contig.
 
 To perform the functional analysis, we obtained the COG annotations of
@@ -492,6 +494,36 @@ CDS it was found to be associated with.
     plot_comp
 
 ![](Variant_population_analysis_files/figure-markdown_strict/unnamed-chunk-14-1.png)
+ # Simplified plot
+     ## To help with the scale of the dots, we removed any poorly characterized annotations and reorder COG categories by COG families
+
+    data_plot_simple=subset(data_plot, data_plot$COG_family!='Poorly characterized')
+
+    data_plot_simple$group=as.factor(data_plot_simple$group)
+
+    data_plot_simple <- data_plot_simple %>%
+      mutate(COG_cat = factor(COG_cat, levels = unique(COG_cat[order(COG_family)])),
+             group = factor(group, levels = rev(levels(group))))
+
+    plot_comp_simple= ggplot(data_plot_simple, aes(x=COG_cat, y=group, col=COG_cat)) +
+      geom_point(aes(size=prop, col=COG_family))+
+      xlab('COG functional category') +
+      scale_color_arcadia(palette_name = 'primary',reverse=FALSE,name = "COG functional family")+
+     theme(
+        legend.position = "right",
+        legend.box = "vertical" ,
+        legend.margin = margin(t = 25)) +
+      guides(
+        color = guide_legend(order = 1, title.position = "top",ncol = 1),
+        size = guide_legend(order = 2, title = "Percentage of contigs \nbelonging to COG \nfunctional category",title.position = "top", byrow = TRUE, ncol = 1)
+      )+
+      ylab('Non-silent variation ratio')+
+      coord_flip()+
+      theme_arcadia(x_axis_type = 'categorical', y_axis_type = 'categorical')
+
+    plot_comp_simple
+
+![](Variant_population_analysis_files/figure-markdown_strict/unnamed-chunk-14-2.png)
 
 ------------------------------------------------------------------------
 

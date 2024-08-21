@@ -502,8 +502,14 @@ Resistance
     colors <- c("Susceptible" = "#7A77AB", "Resistant" = "#F7B846", "No_phenotype_available"="#EDE6DA")
     names(colors) <- c("Susceptible", "Resistant", "NA")
 
-    Heatmap(mat, col = colors, name = "Categories",rect_gp = gpar(col = "white", lwd = 1),
-            row_names_gp = gpar(fontsize = 7)) 
+    Heatmap(mat, col = colors, 
+            name = "AMR phenotype",
+            rect_gp = gpar(col = "white", lwd = 1),
+            row_names_gp = gpar(fontsize = 7),
+            row_title = expression(italic("E. coli") ~ strains),
+            row_title_side = "right",
+            column_title = expression("Variant position within " * italic("dfrD")),
+            column_title_side="bottom") 
 
 ![](Antimicrobial_resistance_investigation_files/figure-markdown_strict/unnamed-chunk-7-1.png)
 
